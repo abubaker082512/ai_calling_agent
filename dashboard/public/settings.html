@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Calling Agent - Settings</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span>AI Calling Agent</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <span class="nav-label">Menu</span>
+                <a href="index.html" class="nav-item"><span>Dashboard</span></a>
+                <a href="campaigns.html" class="nav-item"><span>Campaigns</span></a>
+                <a href="logs.html" class="nav-item"><span>Call Logs</span></a>
+                <a href="settings.html" class="nav-item active"><span>Settings</span></a>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="header">
+            <div class="header-left">
+                <h1>Settings</h1>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="dialer-card">
+                <h2>Configuration</h2>
+                <div class="dialer-input-group" style="flex-direction: column; max-width: 500px;">
+                    <label style="color: var(--text-secondary); font-size: 14px; margin-bottom: 4px;">Organization
+                        ID</label>
+                    <input type="text" id="org-id" class="dialer-input" value="17170ec5-ac80-4dbf-a293-7825caa3ca70">
+
+                    <label
+                        style="color: var(--text-secondary); font-size: 14px; margin-bottom: 4px; margin-top: 12px;">Telnyx
+                        Phone Number</label>
+                    <input type="text" id="phone-number" class="dialer-input" value="+1987654321">
+
+                    <button class="call-btn" onclick="saveSettings()" style="margin-top: 24px;">Save Settings</button>
+                </div>
+                <div id="save-status" class="call-status"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const orgId = localStorage.getItem('org_id');
+            const phone = localStorage.getItem('phone_number');
+            if (orgId) document.getElementById('org-id').value = orgId;
+            if (phone) document.getElementById('phone-number').value = phone;
+        });
+
+        function saveSettings() {
+            const orgId = document.getElementById('org-id').value;
+            const phone = document.getElementById('phone-number').value;
+            const status = document.getElementById('save-status');
+
+            localStorage.setItem('org_id', orgId);
+            localStorage.setItem('phone_number', phone);
+
+            status.textContent = 'Settings saved!';
+            status.className = 'call-status success';
+
+            setTimeout(() => {
+                status.textContent = '';
+            }, 3000);
+        }
+    </script>
+</body>
+
+</html>

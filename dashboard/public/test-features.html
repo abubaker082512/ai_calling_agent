@@ -71,7 +71,7 @@
             <header class="flex justify-between items-center mb-8">
                 <div>
                     <h1 class="text-3xl font-bold text-white">Test Features</h1>
-                    <p class="text-gray-400 mt-1">Test different voices with custom scripts</p>
+                    <p class="text-gray-400 mt-1">Test different AI voices with custom scripts</p>
                 </div>
             </header>
 
@@ -88,28 +88,15 @@
 
                     <form id="voiceTestForm" class="space-y-6">
                         <div>
-                            <label class="block text-sm font-medium text-gray-400 mb-2">Phone Number (to receive
-                                call)</label>
-                            <input type="tel" id="testPhone"
-                                class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
-                                placeholder="+1234567890">
-                        </div>
-
-                        <div>
                             <label class="block text-sm font-medium text-gray-400 mb-2">Select Voice</label>
                             <select id="voiceSelect"
                                 class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
-                                <option value="en-US-Wavenet-A">English US - Wavenet A (Male)</option>
-                                <option value="en-US-Wavenet-B">English US - Wavenet B (Male)</option>
-                                <option value="en-US-Wavenet-C">English US - Wavenet C (Female)</option>
-                                <option value="en-US-Wavenet-D">English US - Wavenet D (Male)</option>
-                                <option value="en-US-Wavenet-E">English US - Wavenet E (Female)</option>
-                                <option value="en-US-Wavenet-F">English US - Wavenet F (Female)</option>
-                                <option value="en-US-Standard-A">English US - Standard A (Male)</option>
-                                <option value="en-US-Standard-B">English US - Standard B (Male)</option>
-                                <option value="en-US-Standard-C">English US - Standard C (Female)</option>
-                                <option value="en-US-Standard-D">English US - Standard D (Male)</option>
-                                <option value="en-US-Standard-E">English US - Standard E (Female)</option>
+                                <option value="alloy">Alloy (Neutral)</option>
+                                <option value="echo">Echo (Male)</option>
+                                <option value="fable">Fable (British Male)</option>
+                                <option value="onyx">Onyx (Deep Male)</option>
+                                <option value="nova">Nova (Female)</option>
+                                <option value="shimmer">Shimmer (Soft Female)</option>
                             </select>
                         </div>
 
@@ -117,18 +104,32 @@
                             <label class="block text-sm font-medium text-gray-400 mb-2">Script</label>
                             <textarea id="testScript" rows="4"
                                 class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
-                                placeholder="Enter the text you want the agent to speak..."></textarea>
+                                placeholder="Enter the text you want the AI to speak...">Hello! This is a test of the AI voice system. How does this sound?</textarea>
                         </div>
 
                         <button type="submit"
                             class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center">
                             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            Call Me & Speak
+                            Generate & Play Voice
                         </button>
                     </form>
+
+                    <!-- Audio Player -->
+                    <div id="audioPlayerContainer" class="mt-6 hidden">
+                        <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                            <p class="text-sm text-gray-400 mb-2">Generated Audio:</p>
+                            <audio id="audioPlayer" controls class="w-full">
+                                Your browser does not support the audio element.
+                            </audio>
+                        </div>
+                    </div>
+
+                    <div id="statusMessage" class="mt-4 text-sm"></div>
                 </div>
 
                 <!-- Instructions -->
@@ -138,74 +139,79 @@
                         <li class="flex items-start">
                             <span
                                 class="flex-shrink-0 w-6 h-6 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mr-3 mt-0.5">1</span>
-                            <span>Enter your phone number where you want to receive the test call.</span>
+                            <span>Select a voice from OpenAI's TTS library (6 different voices available).</span>
                         </li>
                         <li class="flex items-start">
                             <span
                                 class="flex-shrink-0 w-6 h-6 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mr-3 mt-0.5">2</span>
-                            <span>Select a voice from the Telnyx voice library.</span>
+                            <span>Type the script you want the AI to speak.</span>
                         </li>
                         <li class="flex items-start">
                             <span
                                 class="flex-shrink-0 w-6 h-6 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mr-3 mt-0.5">3</span>
-                            <span>Type the script you want the agent to read.</span>
+                            <span>Click "Generate & Play Voice" to create the audio.</span>
                         </li>
                         <li class="flex items-start">
                             <span
                                 class="flex-shrink-0 w-6 h-6 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mr-3 mt-0.5">4</span>
-                            <span>Click "Call Me & Speak". The system will call you and read the script using the
-                                selected voice.</span>
+                            <span>Listen to the generated audio directly in your browser!</span>
                         </li>
                     </ul>
+
+                    <div class="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                        <p class="text-sm text-blue-300">
+                            <strong>💡 Tip:</strong> Try different voices to find the perfect match for your AI calling
+                            agent!
+                        </p>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
     <script>
-        // Load settings
-        const savedPhone = localStorage.getItem('test_phone_number');
-        if (savedPhone) {
-            document.getElementById('testPhone').value = savedPhone;
-        }
-
         document.getElementById('voiceTestForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const to = document.getElementById('testPhone').value;
             const voice = document.getElementById('voiceSelect').value;
             const text = document.getElementById('testScript').value;
-            const from = localStorage.getItem('telnyx_phone_number') || '+1234567890'; // Fallback or get from settings
+            const statusMessage = document.getElementById('statusMessage');
+            const audioPlayerContainer = document.getElementById('audioPlayerContainer');
+            const audioPlayer = document.getElementById('audioPlayer');
 
-            if (!to || !text) {
-                alert('Please enter a phone number and script');
+            if (!text) {
+                statusMessage.innerHTML = '<span class="text-red-400">Please enter some text</span>';
                 return;
             }
 
-            // Save phone for next time
-            localStorage.setItem('test_phone_number', to);
-
             const btn = e.target.querySelector('button');
             const originalText = btn.innerHTML;
-            btn.innerHTML = 'Initiating Call...';
+            btn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating...';
             btn.disabled = true;
+            statusMessage.innerHTML = '<span class="text-blue-400">Generating audio...</span>';
 
             try {
                 const response = await fetch('/api/test/voice', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ to, from, text, voice })
+                    body: JSON.stringify({ text, voice })
                 });
 
-                const data = await response.json();
+                if (response.ok) {
+                    const audioBlob = await response.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
 
-                if (data.success) {
-                    alert('Call initiated! You should receive it shortly.');
+                    audioPlayer.src = audioUrl;
+                    audioPlayerContainer.classList.remove('hidden');
+                    audioPlayer.play();
+
+                    statusMessage.innerHTML = '<span class="text-green-400">✓ Audio generated successfully!</span>';
                 } else {
-                    alert('Error: ' + data.error);
+                    const error = await response.json();
+                    statusMessage.innerHTML = `<span class="text-red-400">Error: ${error.error}</span>`;
                 }
             } catch (error) {
-                alert('Error connecting to server');
+                statusMessage.innerHTML = '<span class="text-red-400">Error connecting to server</span>';
                 console.error(error);
             } finally {
                 btn.innerHTML = originalText;

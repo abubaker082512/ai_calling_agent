@@ -53,30 +53,33 @@ fastify.get('/api/stats', async (request, reply) => {
     };
 });
 
-// API: Test Voice (New)
+// API: Test Voice (Browser-based TTS using OpenAI)
 fastify.post('/api/test/voice', async (request, reply) => {
     try {
-        const { to, from, text, voice } = request.body as any;
+        const { text, voice } = request.body as any;
 
-        if (!to || !from || !text) {
-            return reply.status(400).send({ error: 'Missing required fields: to, from, text' });
+        if (!text) {
+            return reply.status(400).send({ error: 'Missing required field: text' });
         }
 
-        console.log(`🧪 Starting Voice Test: ${voice} -> ${to}`);
+        console.log(`🧪 Generating voice sample: ${voice}`);
 
-        // Initiate call with client state
-        await telnyxService.makeCall(to, from, {
-            type: 'voice_test',
-            text,
-            voice
+        // Use OpenAI TTS to generate audio
+        const OpenAI = require('openai');
+        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+        const mp3 = await openai.audio.speech.create({
+            model: "tts-1",
+            voice: voice || "alloy",
+            input: text,
         });
 
-        return reply.send({
-            success: true,
-            message: 'Test call initiated. You should receive a call shortly.'
-        });
+        const buffer = Buffer.from(await mp3.arrayBuffer());
+
+        reply.header('Content-Type', 'audio/mpeg');
+        return reply.send(buffer);
     } catch (error: any) {
-        console.error('Error starting voice test:', error);
+        console.error('Error generating voice:', error);
         return reply.status(500).send({ error: error.message });
     }
 });

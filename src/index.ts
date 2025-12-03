@@ -5,10 +5,12 @@ import fastifyStatic from '@fastify/static';
 import dotenv from 'dotenv';
 import path from 'path';
 import { WebSocket } from 'ws';
+import { TelnyxService } from './services/telnyx';
 
 dotenv.config();
 
 const { PORT = 3000 } = process.env;
+const telnyxService = new TelnyxService();
 
 // Stats tracking
 let stats = {
@@ -51,7 +53,81 @@ fastify.get('/api/stats', async (request, reply) => {
     };
 });
 
-// API: Start Call (Simplified - no Telnyx for now)
+// API: Test Voice (New)
+fastify.post('/api/test/voice', async (request, reply) => {
+    try {
+        const { to, from, text, voice } = request.body as any;
+
+        if (!to || !from || !text) {
+            return reply.status(400).send({ error: 'Missing required fields: to, from, text' });
+        }
+
+        console.log(`🧪 Starting Voice Test: ${voice} -> ${to}`);
+
+        // Initiate call with client state
+        await telnyxService.makeCall(to, from, {
+            type: 'voice_test',
+            text,
+            voice
+        });
+
+        return reply.send({
+            success: true,
+            message: 'Test call initiated. You should receive a call shortly.'
+        });
+    } catch (error: any) {
+        console.error('Error starting voice test:', error);
+        return reply.status(500).send({ error: error.message });
+    }
+});
+
+// Webhook: Telnyx
+fastify.post('/webhooks/telnyx', async (request, reply) => {
+    try {
+        const event = request.body as any;
+        const { event_type, payload } = event.data;
+
+        console.log(`📨 Webhook: ${event_type}`);
+
+        // Check for client state to identify test calls
+        let clientState: any = null;
+        if (payload.client_state) {
+            try {
+                const json = Buffer.from(payload.client_state, 'base64').toString('utf-8');
+                clientState = JSON.parse(json);
+            } catch (e) {
+                console.error('Error parsing client_state:', e);
+            }
+        }
+
+        if (clientState && clientState.type === 'voice_test') {
+            console.log('🎤 Handling Voice Test Event');
+
+            if (event_type === 'call.answered') {
+                // Speak the text when answered
+                await telnyxService.speak(
+                    payload.call_control_id,
+                    clientState.text,
+                    clientState.voice
+                );
+            } else if (event_type === 'call.speak.ended') {
+                // Hangup after speaking
+                console.log('✅ Voice Test Complete. Hanging up.');
+                await telnyxService.hangupCall(payload.call_control_id);
+            }
+        } else {
+            // Normal call handling
+            telnyxService.handleWebhook(event);
+        }
+
+        return reply.send({ received: true });
+    } catch (error) {
+        console.error('Webhook error:', error);
+        return reply.status(500).send({ error: 'Internal Server Error' });
+    }
+});
+
+// API: Start Call (Simplified)
 fastify.post('/api/calls/start', async (request, reply) => {
     try {
         const { to, from } = request.body as any;
@@ -60,18 +136,17 @@ fastify.post('/api/calls/start', async (request, reply) => {
             return reply.status(400).send({ error: 'Missing required fields: to, from' });
         }
 
-        // Simulate call initiation
-        const callId = `call_${Date.now()}`;
-        stats.totalCalls++;
-
-        console.log(`📞 Simulated call from ${from} to ${to}`);
-
-        return reply.send({
-            success: true,
-            call_id: callId,
-            status: 'initiated',
-            message: 'Call simulated successfully (Telnyx integration pending)'
-        });
+        // Use real Telnyx service if available, else simulate
+        if (process.env.TELNYX_API_KEY) {
+            await telnyxService.makeCall(to, from);
+            return reply.send({ success: true, status: 'initiated', message: 'Call initiated via Telnyx' });
+        } else {
+            // Simulate
+            const callId = `call_${Date.now()}`;
+            stats.totalCalls++;
+            console.log(`📞 Simulated call from ${from} to ${to}`);
+            return reply.send({ success: true, call_id: callId, status: 'initiated', message: 'Simulated call' });
+        }
     } catch (error: any) {
         console.error('Error starting call:', error);
         return reply.status(500).send({ error: error.message });

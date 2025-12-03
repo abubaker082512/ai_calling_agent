@@ -79,20 +79,40 @@ export class TelnyxService extends EventEmitter {
         }
     }
 
-    public async makeCall(to: string, from: string) {
+    public async speak(callControlId: string, text: string, voice: string = 'en-US-Wavenet-A', language: string = 'en-US') {
+        try {
+            console.log(`Speaking on call ${callControlId}: "${text}" (${voice})`);
+            await this.client.calls.speak({
+                call_control_id: callControlId,
+                payload: text,
+                voice: voice,
+                language: language
+            });
+        } catch (error) {
+            console.error('Error speaking on call:', error);
+        }
+    }
+
+    public async makeCall(to: string, from: string, clientState: any = null) {
         try {
             const domain = process.env.DOMAIN || 'localhost:3000';
             const streamUrl = `wss://${domain}/media/telnyx`;
 
             console.log(`Initiating outbound call to ${to} from ${from}`);
 
-            const { data: call } = await this.client.calls.create({
+            const callParams: any = {
                 connection_id: process.env.TELNYX_CONNECTION_ID,
                 to: to,
                 from: from,
                 stream_url: streamUrl,
                 stream_track: 'inbound_track',
-            });
+            };
+
+            if (clientState) {
+                callParams.client_state = Buffer.from(JSON.stringify(clientState)).toString('base64');
+            }
+
+            const { data: call } = await this.client.calls.create(callParams);
 
             console.log(`Outbound call initiated: ${call.call_control_id}`);
             return call;

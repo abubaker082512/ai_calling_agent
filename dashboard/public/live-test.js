@@ -226,16 +226,23 @@ async function startBrowserCall() {
         ws.onopen = () => {
             console.log('Browser call WebSocket connected');
 
-            // Send start message
-            ws.send(JSON.stringify({
+            // Send start message with proper greeting
+            const startMessage = {
                 type: 'start',
-                greeting: systemPrompt.value
-            }));
+                greeting: "Hello! I'm an AI assistant. How can I help you today?"
+            };
+            console.log('Sending start message:', startMessage);
+            ws.send(JSON.stringify(startMessage));
         };
 
         ws.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            handleBrowserCallMessage(message);
+            console.log('WebSocket message received:', event.data);
+            try {
+                const message = JSON.parse(event.data);
+                handleBrowserCallMessage(message);
+            } catch (err) {
+                console.error('Error parsing WebSocket message:', err);
+            }
         };
 
         ws.onerror = (error) => {
@@ -244,8 +251,8 @@ async function startBrowserCall() {
             stopBrowserCall();
         };
 
-        ws.onclose = () => {
-            console.log('WebSocket closed');
+        ws.onclose = (event) => {
+            console.log('WebSocket closed. Code:', event.code, 'Reason:', event.reason);
             stopBrowserCall();
         };
 
@@ -335,6 +342,8 @@ function speakText(text) {
 
 // Stop Browser Call
 function stopBrowserCall() {
+    console.log('Stopping browser call...');
+
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
     }
@@ -345,8 +354,16 @@ function stopBrowserCall() {
     }
 
     if (ws) {
-        ws.send(JSON.stringify({ type: 'stop' }));
-        ws.close();
+        try {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'stop' }));
+            }
+            if (ws.readyState !== WebSocket.CLOSED && ws.readyState !== WebSocket.CLOSING) {
+                ws.close();
+            }
+        } catch (err) {
+            console.error('Error closing WebSocket:', err);
+        }
         ws = null;
     }
 

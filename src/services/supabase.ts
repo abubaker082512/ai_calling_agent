@@ -79,6 +79,26 @@ export class SupabaseService {
         return data || [];
     }
 
+    // Save transcript (for real-time conversation)
+    async saveTranscript(callId: string, speaker: 'human' | 'ai', text: string, confidence: number = 1.0) {
+        const { data, error } = await this.client
+            .from('call_transcripts')
+            .insert([{
+                call_id: callId,
+                speaker,
+                text,
+                confidence
+            }])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error saving transcript:', error);
+            return null;
+        }
+        return data;
+    }
+
     // Call Summary
     async createCallSummary(data: {
         call_id: string;

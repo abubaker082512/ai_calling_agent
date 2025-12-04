@@ -65,4 +65,25 @@ export class RedisService {
         await this.client.del(`active_call:${callControlId}`);
         await this.client.del(`call:${callControlId}:stream`);
     }
+
+    // Generic Redis methods for conversation state
+    public async get(key: string): Promise<string | null> {
+        return await this.client.get(key);
+    }
+
+    public async set(key: string, value: string, ttl?: number): Promise<void> {
+        if (ttl) {
+            await this.client.set(key, value, 'EX', ttl);
+        } else {
+            await this.client.set(key, value);
+        }
+    }
+
+    public async del(key: string): Promise<void> {
+        await this.client.del(key);
+    }
+
+    public async keys(pattern: string): Promise<string[]> {
+        return await this.client.keys(pattern);
+    }
 }

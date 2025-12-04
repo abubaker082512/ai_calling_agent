@@ -92,6 +92,86 @@ fastify.post('/api/test/voice', async (request, reply) => {
     }
 });
 
+// Store active conversation loops
+const activeConversations = new Map<string, any>();
+
+// TeXML Inbound Webhook Handler (for conversational AI)
+fastify.post('/telnyx/inbound', async (request, reply) => {
+    try {
+        const event = request.body as any;
+        const { event_type, payload } = event.data;
+
+        console.log(`📞 TeXML Inbound Event: ${event_type}`);
+
+        switch (event_type) {
+            case 'call.initiated':
+                console.log(`📞 Incoming call from ${payload.from}`);
+                stats.totalCalls++;
+                stats.activeCalls++;
+                break;
+
+            case 'call.answered':
+                console.log(`✅ Call answered: ${payload.call_control_id}`);
+
+                // Start conversation loop
+                const { ConversationLoop } = await import('./services/conversationLoop');
+                const { v4: uuidv4 } = await import('uuid');
+
+                const callId = uuidv4();
+                const conversationLoop = new ConversationLoop({
+                    callId,
+                    callControlId: payload.call_control_id,
+                    callerPhone: payload.from,
+                    purpose: 'customer support'
+                });
+
+                // Store the conversation loop
+                activeConversations.set(payload.call_control_id, conversationLoop);
+
+                // Start the conversation
+                await conversationLoop.start("Hello! I'm an AI assistant. How can I help you today?");
+
+                // Listen for conversation events
+                conversationLoop.on('error', (error) => {
+                    console.error(`❌ Conversation error for ${payload.call_control_id}:`, error);
+                });
+
+                conversationLoop.on('stopped', () => {
+                    console.log(`🛑 Conversation stopped for ${payload.call_control_id}`);
+                    activeConversations.delete(payload.call_control_id);
+                    stats.activeCalls = Math.max(0, stats.activeCalls - 1);
+                });
+
+                break;
+
+            case 'call.hangup':
+                console.log(`📴 Call ended: ${payload.call_control_id}`);
+
+                // Stop conversation loop
+                const conversation = activeConversations.get(payload.call_control_id);
+                if (conversation) {
+                    await conversation.stop();
+                    activeConversations.delete(payload.call_control_id);
+                }
+
+                stats.activeCalls = Math.max(0, stats.activeCalls - 1);
+                break;
+
+            case 'call.speak.ended':
+                console.log(`🗣️ Speech ended for ${payload.call_control_id}`);
+                break;
+
+            default:
+                console.log(`📨 Unhandled event: ${event_type}`);
+        }
+
+        return reply.send({ received: true });
+    } catch (error: any) {
+        console.error('❌ TeXML webhook error:', error);
+        return reply.status(500).send({ error: error.message });
+    }
+});
+
 // Webhook: Telnyx
 fastify.post('/webhooks/telnyx', async (request, reply) => {
     try {

@@ -1,0 +1,246 @@
+import { DeepgramService, TranscriptResult } from './deepgramService';
+import { ConversationEngine, ConversationContext } from './conversationEngine';
+import { ConversationStateManager } from './conversationState';
+import { TelnyxService } from './telnyx';
+import { SupabaseService } from './supabase';
+import EventEmitter from 'events';
+
+export interface ConversationLoopConfig {
+    callId: string;
+    callControlId: string;
+    callerPhone: string;
+    purpose?: string;
+    greeting?: string;
+}
+
+export class ConversationLoop extends EventEmitter {
+    private deepgram: DeepgramService;
+    private conversationEngine: ConversationEngine;
+    private stateManager: ConversationStateManager;
+    private telnyx: TelnyxService;
+    private supabase: SupabaseService;
+
+    private callId: string;
+    private callControlId: string;
+    private isActive: boolean = false;
+    private isAISpeaking: boolean = false;
+    private interruptBuffer: string = '';
+
+    constructor(config: ConversationLoopConfig) {
+        super();
+
+        this.callId = config.callId;
+        this.callControlId = config.callControlId;
+
+        // Initialize services
+        this.deepgram = new DeepgramService();
+        this.conversationEngine = new ConversationEngine();
+        this.stateManager = new ConversationStateManager();
+        this.telnyx = new TelnyxService();
+        this.supabase = new SupabaseService();
+
+        this.setupEventHandlers();
+    }
+
+    /**
+     * Set up event handlers for all services
+     */
+    private setupEventHandlers(): void {
+        // Deepgram events
+        this.deepgram.on('transcript', async (result: TranscriptResult) => {
+            await this.handleTranscript(result);
+        });
+
+        this.deepgram.on('speech_start', () => {
+            this.handleSpeechStart();
+        });
+
+        this.deepgram.on('error', (error) => {
+            console.error('❌ Deepgram error in conversation loop:', error);
+            this.emit('error', error);
+        });
+
+        // Conversation engine events
+        this.conversationEngine.on('response', (data) => {
+            console.log(`📊 AI response generated (${data.tokens} tokens)`);
+        });
+
+        this.conversationEngine.on('error', (error) => {
+            console.error('❌ Conversation engine error:', error);
+        });
+    }
+
+    /**
+     * Start the conversation loop
+     */
+    async start(greeting?: string): Promise<void> {
+        try {
+            console.log(`🚀 Starting conversation loop for call ${this.callId}`);
+            this.isActive = true;
+
+            // Create conversation session
+            const systemPrompt = ConversationEngine.createSystemPrompt('customer support');
+            await this.stateManager.createSession(this.callId, systemPrompt, {
+                callerPhone: this.callControlId,
+                callPurpose: 'support'
+            });
+
+            // Start Deepgram stream
+            await this.deepgram.startStream();
+
+            // Play greeting
+            const greetingText = greeting || "Hello! I'm an AI assistant. How can I help you today?";
+            await this.speak(greetingText);
+
+            // Save greeting to conversation
+            await this.stateManager.addMessage(this.callId, 'assistant', greetingText);
+
+            console.log('✅ Conversation loop started successfully');
+            this.emit('started');
+
+        } catch (error) {
+            console.error('❌ Failed to start conversation loop:', error);
+            this.emit('error', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Handle incoming transcript from Deepgram
+     */
+    private async handleTranscript(result: TranscriptResult): Promise<void> {
+        if (!result.isFinal || !result.text.trim()) {
+            return;
+        }
+
+        const userText = result.text.trim();
+        console.log(`👤 User said: "${userText}"`);
+
+        // Save user message
+        await this.stateManager.addMessage(this.callId, 'user', userText);
+
+        // Save to database
+        await this.supabase.saveTranscript(this.callId, 'human', userText, result.confidence);
+
+        // Generate AI response
+        const context = await this.stateManager.getContext(this.callId);
+        if (!context) {
+            console.error('❌ No conversation context found');
+            return;
+        }
+
+        const aiResponse = await this.conversationEngine.generateResponse(context, userText);
+
+        // Save AI response
+        await this.stateManager.addMessage(this.callId, 'assistant', aiResponse);
+        await this.supabase.saveTranscript(this.callId, 'ai', aiResponse, 1.0);
+
+        // Speak AI response
+        await this.speak(aiResponse);
+    }
+
+    /**
+     * Handle speech start (for interrupt detection)
+     */
+    private handleSpeechStart(): void {
+        if (this.isAISpeaking) {
+            console.log('🛑 User interrupted AI - stopping playback');
+            // TODO: Implement stop playback when Telnyx supports it
+            this.isAISpeaking = false;
+            this.emit('interrupted');
+        }
+    }
+
+    /**
+     * Speak text using Telnyx TTS
+     */
+    private async speak(text: string): Promise<void> {
+        try {
+            this.isAISpeaking = true;
+            console.log(`🗣️ AI speaking: "${text}"`);
+
+            await this.telnyx.speak(this.callControlId, text);
+
+            // Wait a bit for speech to complete
+            // In production, listen for call.speak.ended webhook
+            await new Promise(resolve => setTimeout(resolve, text.length * 50)); // Rough estimate
+
+            this.isAISpeaking = false;
+            this.emit('speech_complete');
+
+        } catch (error) {
+            console.error('❌ Error speaking:', error);
+            this.isAISpeaking = false;
+            throw error;
+        }
+    }
+
+    /**
+     * Process incoming audio from call
+     */
+    async processAudio(audioData: Buffer): Promise<void> {
+        if (!this.isActive) {
+            return;
+        }
+
+        // Send audio to Deepgram for transcription
+        this.deepgram.sendAudio(audioData);
+    }
+
+    /**
+     * Stop the conversation loop
+     */
+    async stop(): Promise<void> {
+        try {
+            console.log(`🛑 Stopping conversation loop for call ${this.callId}`);
+            this.isActive = false;
+
+            // Close Deepgram connection
+            await this.deepgram.close();
+
+            // Get final conversation context
+            const context = await this.stateManager.endSession(this.callId);
+
+            // Save final conversation summary
+            if (context) {
+                await this.saveFinalSummary(context);
+            }
+
+            console.log('✅ Conversation loop stopped');
+            this.emit('stopped');
+
+        } catch (error) {
+            console.error('❌ Error stopping conversation loop:', error);
+            this.emit('error', error);
+        }
+    }
+
+    /**
+     * Save final conversation summary
+     */
+    private async saveFinalSummary(context: ConversationContext): Promise<void> {
+        try {
+            const summary = {
+                callId: this.callId,
+                messageCount: context.messages.length,
+                duration: Date.now() - context.metadata.startTime.getTime(),
+                lastMessage: context.messages[context.messages.length - 1]?.content || ''
+            };
+
+            console.log('📝 Conversation summary:', summary);
+
+            // TODO: Save summary to database
+            // await this.supabase.saveCallSummary(this.callId, summary);
+
+        } catch (error) {
+            console.error('❌ Error saving conversation summary:', error);
+        }
+    }
+
+    /**
+     * Check if conversation is active
+     */
+    isConversationActive(): boolean {
+        return this.isActive;
+    }
+}

@@ -490,22 +490,47 @@ fastify.register(async (fastify) => {
 
                     if (data.type === 'start') {
                         console.log(`🚀 Starting browser call conversation for ${callId}`);
-                        // Start conversation loop
-                        conversationLoop = new ConversationLoop({
-                            callId,
-                            callControlId: callId, // Use callId as fake control ID
-                            callerPhone: 'browser',
-                            greeting: data.greeting,
-                            onSpeak
-                        });
+                        try {
+                            // Start conversation loop
+                            conversationLoop = new ConversationLoop({
+                                callId,
+                                callControlId: callId, // Use callId as fake control ID
+                                callerPhone: 'browser',
+                                greeting: data.greeting,
+                                onSpeak
+                            });
 
-                        browserCallLoops.set(callId, conversationLoop);
-                        await conversationLoop.start(data.greeting);
+                            browserCallLoops.set(callId, conversationLoop);
 
-                        connection.socket.send(JSON.stringify({
-                            type: 'started',
-                            callId
-                        }));
+                            console.log('📞 ConversationLoop created, starting...');
+                            await conversationLoop.start(data.greeting);
+                            console.log('✅ ConversationLoop started successfully');
+
+                            connection.socket.send(JSON.stringify({
+                                type: 'started',
+                                callId
+                            }));
+                        } catch (startError) {
+                            console.error('❌ Error starting conversation loop:', startError);
+                            console.error('Stack trace:', startError instanceof Error ? startError.stack : 'No stack trace');
+
+                            // Send error to client
+                            connection.socket.send(JSON.stringify({
+                                type: 'error',
+                                error: `Failed to start conversation: ${startError instanceof Error ? startError.message : 'Unknown error'}`
+                            }));
+
+                            // Clean up
+                            if (conversationLoop) {
+                                try {
+                                    await conversationLoop.stop();
+                                } catch (stopError) {
+                                    console.error('Error stopping conversation loop:', stopError);
+                                }
+                            }
+                            browserCallLoops.delete(callId);
+                            browserCallClients.delete(callId);
+                        }
 
                     } else if (data.type === 'audio' && conversationLoop) {
                         // Process base64 encoded audio from browser

@@ -31,12 +31,68 @@ const avgResponseTimeEl = document.getElementById('avgResponseTime');
 const estimatedCostEl = document.getElementById('estimatedCost');
 const currentCallIdEl = document.getElementById('currentCallId');
 
-// Mode toggle elements (will be added to HTML)
-const phoneModeBtn = document.getElementById('phoneMode');
-const browserModeBtn = document.getElementById('browserMode');
-const phoneInputs = document.getElementById('phoneInputs');
-const browserInfo = document.getElementById('browserInfo');
+// Mode toggle elements (will be injected dynamically if not present)
+let phoneModeBtn = document.getElementById('phoneMode');
+let browserModeBtn = document.getElementById('browserMode');
+let phoneInputs = document.getElementById('phoneInputs');
+let browserInfo = document.getElementById('browserInfo');
 const startBtnText = document.getElementById('startBtnText');
+
+// Dynamically inject mode toggle UI if elements don't exist
+if (!document.getElementById('phoneMode')) {
+    const phoneNumberInput = document.getElementById('phoneNumber');
+    if (phoneNumberInput) {
+        const parentContainer = phoneNumberInput.closest('.flex.items-center.space-x-4');
+        if (parentContainer) {
+            // Create mode toggle HTML
+            const modeToggleHTML = `
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Call Mode</label>
+                    <div class="flex bg-gray-800 rounded-lg p-1">
+                        <button id="phoneMode" class="mode-toggle px-3 py-1 text-xs font-medium rounded transition-all bg-gray-700 text-white">
+                            📞 Phone
+                        </button>
+                        <button id="browserMode" class="mode-toggle px-3 py-1 text-xs font-medium rounded transition-all text-gray-400 hover:text-white">
+                            🌐 Browser
+                        </button>
+                    </div>
+                </div>
+                <div class="h-8 w-px bg-gray-700"></div>
+            `;
+
+            // Create browser info HTML
+            const browserInfoHTML = `
+                <div id="browserInfo" class="hidden flex items-center space-x-2 text-sm text-gray-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    <span>Using browser microphone</span>
+                </div>
+            `;
+
+            // Wrap existing phone inputs
+            const phoneInputsWrapper = document.createElement('div');
+            phoneInputsWrapper.id = 'phoneInputs';
+            phoneInputsWrapper.className = 'flex items-center space-x-4';
+
+            // Move all children to wrapper
+            while (parentContainer.firstChild) {
+                phoneInputsWrapper.appendChild(parentContainer.firstChild);
+            }
+
+            // Insert mode toggle, wrapped phone inputs, and browser info
+            parentContainer.innerHTML = modeToggleHTML;
+            parentContainer.appendChild(phoneInputsWrapper);
+            parentContainer.insertAdjacentHTML('beforeend', browserInfoHTML);
+        }
+    }
+}
+
+// Re-get elements after injection
+phoneModeBtn = document.getElementById('phoneMode');
+browserModeBtn = document.getElementById('browserMode');
+phoneInputs = document.getElementById('phoneInputs');
+browserInfo = document.getElementById('browserInfo');
 
 // Mode Toggle Handlers
 if (phoneModeBtn && browserModeBtn) {

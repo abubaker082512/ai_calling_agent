@@ -426,6 +426,92 @@ fastify.register(async (fastify) => {
     });
 });
 
+// Browser Call WebSocket (for browser-based testing without phone)
+import { ConversationLoop } from './services/conversationLoop';
+
+const browserCallLoops = new Map<string, ConversationLoop>();
+
+fastify.register(async (fastify) => {
+    fastify.get('/ws/browser-call', { websocket: true }, (connection: any, req) => {
+        const callId = 'browser_' + Date.now();
+        console.log(`🌐 Browser call client connected: ${callId}`);
+
+        let conversationLoop: ConversationLoop | null = null;
+
+        // Custom speak handler that sends text to browser
+        const onSpeak = async (text: string) => {
+            try {
+                if (connection.socket.readyState === WebSocket.OPEN) {
+                    connection.socket.send(JSON.stringify({
+                        type: 'speak',
+                        data: { text }
+                    }));
+                }
+            } catch (err) {
+                console.error('Error sending speak to browser:', err);
+            }
+        };
+
+        // Handle incoming messages from browser
+        connection.socket.on('message', async (message: any) => {
+            try {
+                const data = JSON.parse(message.toString());
+
+                if (data.type === 'start') {
+                    // Start conversation loop
+                    conversationLoop = new ConversationLoop({
+                        callId,
+                        callControlId: callId, // Use callId as fake control ID
+                        callerPhone: 'browser',
+                        greeting: data.greeting,
+                        onSpeak
+                    });
+
+                    browserCallLoops.set(callId, conversationLoop);
+                    await conversationLoop.start(data.greeting);
+
+                    connection.socket.send(JSON.stringify({
+                        type: 'started',
+                        callId
+                    }));
+
+                } else if (data.type === 'audio' && conversationLoop) {
+                    // Process audio from browser
+                    const audioBuffer = Buffer.from(data.audio, 'base64');
+                    await conversationLoop.processAudio(audioBuffer);
+
+                } else if (data.type === 'stop' && conversationLoop) {
+                    // Stop conversation
+                    await conversationLoop.stop();
+                    browserCallLoops.delete(callId);
+                    conversationLoop = null;
+                }
+
+            } catch (err) {
+                console.error('Error handling browser call message:', err);
+                connection.socket.send(JSON.stringify({
+                    type: 'error',
+                    error: err instanceof Error ? err.message : 'Unknown error'
+                }));
+            }
+        });
+
+        connection.socket.on('close', async () => {
+            console.log(`🌐 Browser call client disconnected: ${callId}`);
+            if (conversationLoop) {
+                await conversationLoop.stop();
+                browserCallLoops.delete(callId);
+            }
+        });
+
+        // Send initial connection confirmation
+        connection.socket.send(JSON.stringify({
+            type: 'connected',
+            callId
+        }));
+    });
+});
+
 const start = async () => {
     try {
         await fastify.listen({ port: Number(PORT), host: '0.0.0.0' });

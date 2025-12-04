@@ -11,6 +11,7 @@ export interface ConversationLoopConfig {
     callerPhone: string;
     purpose?: string;
     greeting?: string;
+    onSpeak?: (text: string) => Promise<void>;
 }
 
 export class ConversationLoop extends EventEmitter {
@@ -25,12 +26,14 @@ export class ConversationLoop extends EventEmitter {
     private isActive: boolean = false;
     private isAISpeaking: boolean = false;
     private interruptBuffer: string = '';
+    private onSpeak?: (text: string) => Promise<void>;
 
     constructor(config: ConversationLoopConfig) {
         super();
 
         this.callId = config.callId;
         this.callControlId = config.callControlId;
+        this.onSpeak = config.onSpeak;
 
         // Initialize services
         this.deepgram = new DeepgramService();
@@ -182,14 +185,18 @@ export class ConversationLoop extends EventEmitter {
     }
 
     /**
-     * Speak text using Telnyx TTS
+     * Speak text using Telnyx TTS or custom handler
      */
     private async speak(text: string): Promise<void> {
         try {
             this.isAISpeaking = true;
             console.log(`🗣️ AI speaking: "${text}"`);
 
-            await this.telnyx.speak(this.callControlId, text);
+            if (this.onSpeak) {
+                await this.onSpeak(text);
+            } else {
+                await this.telnyx.speak(this.callControlId, text);
+            }
 
             // Wait a bit for speech to complete
             // In production, listen for call.speak.ended webhook

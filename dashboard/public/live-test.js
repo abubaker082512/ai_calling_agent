@@ -8,6 +8,12 @@ let durationInterval = null;
 let messageCount = 0;
 let responseTimes = [];
 
+// Browser call specific
+let callMode = 'phone'; // 'phone' or 'browser'
+let mediaRecorder = null;
+let audioStream = null;
+let speechSynthesis = window.speechSynthesis;
+
 // DOM Elements
 const startCallBtn = document.getElementById('startCallBtn');
 const hangupBtn = document.getElementById('hangupBtn');
@@ -25,24 +31,69 @@ const avgResponseTimeEl = document.getElementById('avgResponseTime');
 const estimatedCostEl = document.getElementById('estimatedCost');
 const currentCallIdEl = document.getElementById('currentCallId');
 
+// Mode toggle elements (will be added to HTML)
+const phoneModeBtn = document.getElementById('phoneMode');
+const browserModeBtn = document.getElementById('browserMode');
+const phoneInputs = document.getElementById('phoneInputs');
+const browserInfo = document.getElementById('browserInfo');
+const startBtnText = document.getElementById('startBtnText');
+
+// Mode Toggle Handlers
+if (phoneModeBtn && browserModeBtn) {
+    phoneModeBtn.addEventListener('click', () => {
+        callMode = 'phone';
+        phoneModeBtn.classList.add('bg-gray-700', 'text-white');
+        phoneModeBtn.classList.remove('text-gray-400');
+        browserModeBtn.classList.remove('bg-gray-700', 'text-white');
+        browserModeBtn.classList.add('text-gray-400');
+
+        if (phoneInputs) phoneInputs.classList.remove('hidden');
+        if (browserInfo) browserInfo.classList.add('hidden');
+        if (startBtnText) startBtnText.textContent = 'Start Test Call';
+    });
+
+    browserModeBtn.addEventListener('click', () => {
+        callMode = 'browser';
+        browserModeBtn.classList.add('bg-gray-700', 'text-white');
+        browserModeBtn.classList.remove('text-gray-400');
+        phoneModeBtn.classList.remove('bg-gray-700', 'text-white');
+        phoneModeBtn.classList.add('text-gray-400');
+
+        if (phoneInputs) phoneInputs.classList.add('hidden');
+        if (browserInfo) browserInfo.classList.remove('hidden');
+        if (startBtnText) startBtnText.textContent = 'Start Browser Call';
+    });
+}
+
 // Load saved settings from localStorage
 function loadSettings() {
     const savedFrom = localStorage.getItem('from_number');
-    if (savedFrom) {
+    if (savedFrom && fromNumber) {
         fromNumber.value = savedFrom;
     }
 }
 
 // Save settings to localStorage
 function saveSettings() {
-    localStorage.setItem('from_number', fromNumber.value);
+    if (fromNumber) {
+        localStorage.setItem('from_number', fromNumber.value);
+    }
 }
 
 // Initialize
 loadSettings();
 
-// Start Call
+// Start Call (Phone or Browser)
 startCallBtn.addEventListener('click', async () => {
+    if (callMode === 'browser') {
+        await startBrowserCall();
+    } else {
+        await startPhoneCall();
+    }
+});
+
+// Start Phone Call
+async function startPhoneCall() {
     const to = phoneNumber.value.trim();
     const from = fromNumber.value.trim();
 
@@ -76,14 +127,11 @@ startCallBtn.addEventListener('click', async () => {
             updateCallStatus('calling');
             saveSettings();
 
-            // Generate a temporary call ID (will be replaced when call is answered)
             currentCallId = 'temp_' + Date.now();
             currentCallIdEl.textContent = currentCallId;
 
-            // Enable hangup button
             hangupBtn.disabled = false;
-            hangupBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            hangupBtn.classList.remove('border-red-500/50');
+            hangupBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'border-red-500/50');
             hangupBtn.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
         } else {
             showStatus(`Error: ${data.error}`, 'error');
@@ -94,32 +142,196 @@ startCallBtn.addEventListener('click', async () => {
         showStatus('Error connecting to server', 'error');
         startCallBtn.disabled = false;
     }
-});
+}
+
+// Start Browser Call
+async function startBrowserCall() {
+    try {
+        startCallBtn.disabled = true;
+        showStatus('Requesting microphone access...', 'info');
+
+        // Request microphone access
+        audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                sampleRate: 16000
+            }
+        });
+
+        showStatus('Connecting to server...', 'info');
+
+        // Connect to WebSocket
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/browser-call`;
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+            console.log('Browser call WebSocket connected');
+
+            // Send start message
+            ws.send(JSON.stringify({
+                type: 'start',
+                greeting: systemPrompt.value
+            }));
+        };
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            handleBrowserCallMessage(message);
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            showStatus('Connection error', 'error');
+            stopBrowserCall();
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket closed');
+            stopBrowserCall();
+        };
+
+        // Start recording and sending audio
+        mediaRecorder = new MediaRecorder(audioStream, {
+            mimeType: 'audio/webm;codecs=opus'
+        });
+
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0 && ws && ws.readyState === WebSocket.OPEN) {
+                // Convert blob to base64 and send
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64 = reader.result.split(',')[1];
+                    ws.send(JSON.stringify({
+                        type: 'audio',
+                        audio: base64
+                    }));
+                };
+                reader.readAsDataURL(event.data);
+            }
+        };
+
+        mediaRecorder.start(100); // Send chunks every 100ms
+
+        updateCallStatus('connected');
+        showStatus('Browser call active - speak now!', 'success');
+
+        hangupBtn.disabled = false;
+        hangupBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'border-red-500/50');
+        hangupBtn.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
+
+    } catch (error) {
+        console.error('Error starting browser call:', error);
+        showStatus('Error: ' + error.message, 'error');
+        startCallBtn.disabled = false;
+        stopBrowserCall();
+    }
+}
+
+// Handle Browser Call Messages
+function handleBrowserCallMessage(message) {
+    console.log('Browser call message:', message);
+
+    switch (message.type) {
+        case 'connected':
+            currentCallId = message.callId;
+            currentCallIdEl.textContent = currentCallId;
+            break;
+
+        case 'started':
+            console.log('Conversation started');
+            break;
+
+        case 'speak':
+            // AI wants to speak - use browser TTS
+            speakText(message.data.text);
+            break;
+
+        case 'transcript':
+            // Display transcript
+            addMessage(message.data);
+            break;
+
+        case 'error':
+            showStatus('Error: ' + message.error, 'error');
+            break;
+    }
+}
+
+// Speak text using browser TTS
+function speakText(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    // Try to use a natural voice
+    const voices = speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => v.name.includes('Google') || v.name.includes('Natural'));
+    if (preferredVoice) {
+        utterance.voice = preferredVoice;
+    }
+
+    speechSynthesis.speak(utterance);
+}
+
+// Stop Browser Call
+function stopBrowserCall() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+    }
+
+    if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+        audioStream = null;
+    }
+
+    if (ws) {
+        ws.send(JSON.stringify({ type: 'stop' }));
+        ws.close();
+        ws = null;
+    }
+
+    speechSynthesis.cancel();
+
+    startCallBtn.disabled = false;
+    hangupBtn.disabled = true;
+    hangupBtn.classList.add('opacity-50', 'cursor-not-allowed', 'border-red-500/50');
+    hangupBtn.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600');
+
+    updateCallStatus('ended');
+}
 
 // Hang Up Call
 hangupBtn.addEventListener('click', async () => {
-    if (!currentCallControlId) {
-        showStatus('No active call to hang up', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/test-call/hangup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ callControlId: currentCallControlId })
-        });
-
-        if (response.ok) {
-            showStatus('Call ended', 'success');
-            endCall();
-        } else {
-            const data = await response.json();
-            showStatus(`Error: ${data.error}`, 'error');
+    if (callMode === 'browser') {
+        stopBrowserCall();
+    } else {
+        if (!currentCallControlId) {
+            showStatus('No active call to hang up', 'error');
+            return;
         }
-    } catch (error) {
-        console.error('Error hanging up:', error);
-        showStatus('Error ending call', 'error');
+
+        try {
+            const response = await fetch('/api/test-call/hangup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ callControlId: currentCallControlId })
+            });
+
+            if (response.ok) {
+                showStatus('Call ended', 'success');
+                endCall();
+            } else {
+                const data = await response.json();
+                showStatus(`Error: ${data.error}`, 'error');
+            }
+        } catch (error) {
+            console.error('Error hanging up:', error);
+            showStatus('Error ending call', 'error');
+        }
     }
 });
 
@@ -195,7 +407,7 @@ function endCall() {
     currentCallControlId = null;
 }
 
-// Connect to WebSocket for live updates
+// Connect to WebSocket for live updates (phone mode)
 function connectWebSocket(callId) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/live-call/${callId}`;
@@ -292,14 +504,5 @@ function showStatus(message, type = 'info') {
         statusMessage.innerHTML = '';
     }, 5000);
 }
-
-// Simulate call answered (for testing - remove in production)
-// In production, this would come from Telnyx webhook
-setTimeout(() => {
-    if (currentCallId && currentCallId.startsWith('temp_')) {
-        // Simulate call answered after 3 seconds
-        // This is just for UI testing - real implementation uses webhooks
-    }
-}, 3000);
 
 console.log('Live Test Dashboard loaded');

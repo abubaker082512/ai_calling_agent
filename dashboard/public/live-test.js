@@ -83,7 +83,8 @@ startCallBtn.addEventListener('click', async () => {
             // Enable hangup button
             hangupBtn.disabled = false;
             hangupBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            hangupBtn.classList.add('hover:bg-red-700');
+            hangupBtn.classList.remove('border-red-500/50');
+            hangupBtn.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
         } else {
             showStatus(`Error: ${data.error}`, 'error');
             startCallBtn.disabled = false;
@@ -125,7 +126,15 @@ hangupBtn.addEventListener('click', async () => {
 // Update Call Status
 function updateCallStatus(status) {
     const statusBadge = callStatus;
+    const statusContainer = document.getElementById('callStatusContainer');
+
     statusBadge.className = 'status-badge';
+
+    if (status === 'idle') {
+        statusContainer.classList.add('hidden');
+    } else {
+        statusContainer.classList.remove('hidden');
+    }
 
     switch (status) {
         case 'idle':
@@ -179,8 +188,8 @@ function endCall() {
 
     startCallBtn.disabled = false;
     hangupBtn.disabled = true;
-    hangupBtn.classList.add('opacity-50', 'cursor-not-allowed');
-    hangupBtn.classList.remove('hover:bg-red-700');
+    hangupBtn.classList.add('opacity-50', 'cursor-not-allowed', 'border-red-500/50');
+    hangupBtn.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600');
 
     currentCallId = null;
     currentCallControlId = null;

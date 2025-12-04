@@ -534,8 +534,11 @@ fastify.register(async (fastify) => {
 
                     } else if (data.type === 'audio' && conversationLoop) {
                         // Process base64 encoded audio from browser
+                        console.log('🎤 Received audio chunk, base64 length:', data.audio?.length || 0);
                         const audioBuffer = Buffer.from(data.audio, 'base64');
+                        console.log('📊 Audio buffer size:', audioBuffer.length, 'bytes');
                         await conversationLoop.processAudio(audioBuffer);
+                        console.log('✅ Audio processed by ConversationLoop');
 
                     } else if (data.type === 'stop' && conversationLoop) {
                         console.log(`🛑 Stopping browser call ${callId}`);

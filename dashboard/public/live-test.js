@@ -263,16 +263,20 @@ async function startBrowserCall() {
 
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0 && ws && ws.readyState === WebSocket.OPEN) {
+                console.log('🎤 Audio chunk available, size:', event.data.size);
                 // Convert blob to base64 and send
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     const base64 = reader.result.split(',')[1];
+                    console.log('📤 Sending audio chunk, base64 length:', base64?.length || 0);
                     ws.send(JSON.stringify({
                         type: 'audio',
                         audio: base64
                     }));
                 };
                 reader.readAsDataURL(event.data);
+            } else {
+                console.warn('⚠️ Cannot send audio - WebSocket not open or no data');
             }
         };
 

@@ -155,16 +155,32 @@ export class ConversationLoop extends EventEmitter {
         try {
             // Dynamically import to avoid circular dependency
             import('../index').then(module => {
-                if (module.broadcastToLiveCall) {
-                    module.broadcastToLiveCall(this.callId, {
-                        type: 'transcript',
-                        data: {
-                            speaker,
-                            text,
-                            timestamp: new Date().toISOString(),
-                            confidence
-                        }
-                    });
+                // Check if this is a browser call
+                if (this.callId.startsWith('browser_')) {
+                    if (module.broadcastToBrowserCall) {
+                        module.broadcastToBrowserCall(this.callId, {
+                            type: 'transcript',
+                            data: {
+                                speaker,
+                                text,
+                                timestamp: new Date().toISOString(),
+                                confidence
+                            }
+                        });
+                    }
+                } else {
+                    // Regular phone call
+                    if (module.broadcastToLiveCall) {
+                        module.broadcastToLiveCall(this.callId, {
+                            type: 'transcript',
+                            data: {
+                                speaker,
+                                text,
+                                timestamp: new Date().toISOString(),
+                                confidence
+                            }
+                        });
+                    }
                 }
             });
         } catch (error) {

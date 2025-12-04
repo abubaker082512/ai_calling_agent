@@ -430,17 +430,36 @@ fastify.register(async (fastify) => {
 import { ConversationLoop } from './services/conversationLoop';
 
 const browserCallLoops = new Map<string, ConversationLoop>();
+const browserCallClients = new Map<string, any>();
+
+// Broadcast function for browser calls
+export function broadcastToBrowserCall(callId: string, data: any) {
+    const client = browserCallClients.get(callId);
+    if (client) {
+        try {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(data));
+            }
+        } catch (err) {
+            console.error('Error broadcasting to browser call client:', err);
+        }
+    }
+}
 
 fastify.register(async (fastify) => {
     fastify.get('/ws/browser-call', { websocket: true }, (connection: any, req) => {
         const callId = 'browser_' + Date.now();
         console.log(`🌐 Browser call client connected: ${callId}`);
 
+        // Store client for broadcasting
+        browserCallClients.set(callId, connection.socket);
+
         let conversationLoop: ConversationLoop | null = null;
 
         // Custom speak handler that sends text to browser
         const onSpeak = async (text: string) => {
             try {
+                console.log(`🗣️ Sending AI response to browser: "${text}"`);
                 if (connection.socket.readyState === WebSocket.OPEN) {
                     connection.socket.send(JSON.stringify({
                         type: 'speak',
@@ -455,36 +474,52 @@ fastify.register(async (fastify) => {
         // Handle incoming messages from browser
         connection.socket.on('message', async (message: any) => {
             try {
-                const data = JSON.parse(message.toString());
+                // Check if it's JSON (control message) or binary (audio)
+                if (typeof message === 'string' || message instanceof Buffer) {
+                    let data;
+                    try {
+                        data = JSON.parse(message.toString());
+                    } catch {
+                        // If not JSON, treat as audio data
+                        if (conversationLoop) {
+                            const audioBuffer = Buffer.isBuffer(message) ? message : Buffer.from(message);
+                            await conversationLoop.processAudio(audioBuffer);
+                        }
+                        return;
+                    }
 
-                if (data.type === 'start') {
-                    // Start conversation loop
-                    conversationLoop = new ConversationLoop({
-                        callId,
-                        callControlId: callId, // Use callId as fake control ID
-                        callerPhone: 'browser',
-                        greeting: data.greeting,
-                        onSpeak
-                    });
+                    if (data.type === 'start') {
+                        console.log(`🚀 Starting browser call conversation for ${callId}`);
+                        // Start conversation loop
+                        conversationLoop = new ConversationLoop({
+                            callId,
+                            callControlId: callId, // Use callId as fake control ID
+                            callerPhone: 'browser',
+                            greeting: data.greeting,
+                            onSpeak
+                        });
 
-                    browserCallLoops.set(callId, conversationLoop);
-                    await conversationLoop.start(data.greeting);
+                        browserCallLoops.set(callId, conversationLoop);
+                        await conversationLoop.start(data.greeting);
 
-                    connection.socket.send(JSON.stringify({
-                        type: 'started',
-                        callId
-                    }));
+                        connection.socket.send(JSON.stringify({
+                            type: 'started',
+                            callId
+                        }));
 
-                } else if (data.type === 'audio' && conversationLoop) {
-                    // Process audio from browser
-                    const audioBuffer = Buffer.from(data.audio, 'base64');
-                    await conversationLoop.processAudio(audioBuffer);
+                    } else if (data.type === 'audio' && conversationLoop) {
+                        // Process base64 encoded audio from browser
+                        const audioBuffer = Buffer.from(data.audio, 'base64');
+                        await conversationLoop.processAudio(audioBuffer);
 
-                } else if (data.type === 'stop' && conversationLoop) {
-                    // Stop conversation
-                    await conversationLoop.stop();
-                    browserCallLoops.delete(callId);
-                    conversationLoop = null;
+                    } else if (data.type === 'stop' && conversationLoop) {
+                        console.log(`🛑 Stopping browser call ${callId}`);
+                        // Stop conversation
+                        await conversationLoop.stop();
+                        browserCallLoops.delete(callId);
+                        browserCallClients.delete(callId);
+                        conversationLoop = null;
+                    }
                 }
 
             } catch (err) {
@@ -502,6 +537,7 @@ fastify.register(async (fastify) => {
                 await conversationLoop.stop();
                 browserCallLoops.delete(callId);
             }
+            browserCallClients.delete(callId);
         });
 
         // Send initial connection confirmation

@@ -88,8 +88,18 @@ export class ConversationLoop extends EventEmitter {
                 callPurpose: 'support'
             });
 
-            // Start Deepgram stream
-            await this.deepgram.startStream();
+            // Start Deepgram stream with appropriate encoding
+            // Browser calls use opus, phone calls use mulaw
+            if (this.callId.startsWith('browser_')) {
+                console.log('🌐 Browser call detected - using opus encoding');
+                await this.deepgram.startStream({
+                    encoding: 'opus',
+                    sampleRate: 48000 // Opus typically uses 48kHz
+                });
+            } else {
+                console.log('📞 Phone call detected - using mulaw encoding');
+                await this.deepgram.startStream();
+            }
 
             // Play greeting
             const greetingText = greeting || "Hello! I'm an AI assistant. How can I help you today?";

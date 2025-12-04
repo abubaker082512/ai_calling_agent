@@ -28,9 +28,15 @@ export class DeepgramService extends EventEmitter {
     /**
      * Start live transcription stream
      */
-    async startStream(): Promise<void> {
+    async startStream(options?: { encoding?: string; sampleRate?: number }): Promise<void> {
         try {
             console.log('🎤 Starting Deepgram live transcription...');
+
+            // Default to mulaw for phone calls, but allow override for browser calls
+            const encoding = options?.encoding || 'mulaw';
+            const sampleRate = options?.sampleRate || 8000;
+
+            console.log(`📊 Deepgram config: encoding=${encoding}, sampleRate=${sampleRate}`);
 
             this.liveTranscription = this.client.listen.live({
                 model: 'nova-2',
@@ -40,8 +46,8 @@ export class DeepgramService extends EventEmitter {
                 interim_results: true,
                 endpointing: 300, // ms of silence before finalizing
                 vad_events: true, // Voice Activity Detection
-                encoding: 'mulaw',
-                sample_rate: 8000,
+                encoding: encoding as any,
+                sample_rate: sampleRate,
                 channels: 1
             });
 

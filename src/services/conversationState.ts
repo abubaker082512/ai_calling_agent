@@ -4,6 +4,7 @@ import { ConversationContext, Message } from './conversationEngine';
 export class ConversationStateManager {
     private redis: RedisService;
     private readonly TTL = 3600; // 1 hour session timeout
+    private memoryStore: Map<string, ConversationContext> = new Map();
 
     constructor() {
         this.redis = new RedisService();
@@ -37,7 +38,8 @@ export class ConversationStateManager {
             const data = await this.redis.get(`conversation:${callId}`);
 
             if (!data) {
-                return null;
+                // Fallback to memory store
+                return this.memoryStore.get(callId) || null;
             }
 
             const context = JSON.parse(data);
@@ -52,8 +54,8 @@ export class ConversationStateManager {
 
             return context;
         } catch (error) {
-            console.error(`❌ Error getting conversation context for ${callId}:`, error);
-            return null;
+            console.warn(`⚠️ Redis error getting context for ${callId}, using memory store:`, error);
+            return this.memoryStore.get(callId) || null;
         }
     }
 
@@ -61,6 +63,9 @@ export class ConversationStateManager {
      * Save conversation context
      */
     async saveContext(callId: string, context: ConversationContext): Promise<void> {
+        // Always save to memory store as backup
+        this.memoryStore.set(callId, context);
+
         try {
             await this.redis.set(
                 `conversation:${callId}`,
@@ -68,7 +73,7 @@ export class ConversationStateManager {
                 this.TTL
             );
         } catch (error) {
-            console.error(`❌ Error saving conversation context for ${callId}:`, error);
+            console.warn(`⚠️ Redis error saving context for ${callId}, using memory store:`, error);
         }
     }
 
@@ -134,7 +139,15 @@ export class ConversationStateManager {
 
         if (context) {
             // Delete from Redis
-            await this.redis.del(`conversation:${callId}`);
+            try {
+                await this.redis.del(`conversation:${callId}`);
+            } catch (error) {
+                console.warn(`⚠️ Redis error deleting context for ${callId}:`, error);
+            }
+
+            // Delete from memory
+            this.memoryStore.delete(callId);
+
             console.log(`✅ Ended conversation session: ${callId}`);
         }
 
@@ -145,15 +158,28 @@ export class ConversationStateManager {
      * Get active sessions count
      */
     async getActiveSessionsCount(): Promise<number> {
-        const keys = await this.redis.keys('conversation:*');
-        return keys.length;
+        try {
+            const keys = await this.redis.keys('conversation:*');
+            return keys.length;
+        } catch (error) {
+            console.warn('⚠️ Redis error getting keys, returning memory store size:', error);
+            return this.memoryStore.size;
+        }
     }
 
     /**
      * Clean up expired sessions (called periodically)
      */
     async cleanup(): Promise<void> {
-        // Redis TTL handles this automatically
-        console.log('🧹 Conversation cleanup completed (handled by Redis TTL)');
+        // Redis TTL handles this automatically for Redis
+        // For memory store, we could implement cleanup logic here if needed
+        // For now, we'll rely on server restarts or manual cleanup
+        const now = new Date().getTime();
+        for (const [key, context] of this.memoryStore.entries()) {
+            if (now - context.metadata.startTime.getTime() > this.TTL * 1000) {
+                this.memoryStore.delete(key);
+            }
+        }
+        console.log('🧹 Conversation cleanup completed');
     }
 }

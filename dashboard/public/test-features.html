@@ -91,12 +91,7 @@
                             <label class="block text-sm font-medium text-gray-400 mb-2">Select Voice</label>
                             <select id="voiceSelect"
                                 class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors">
-                                <option value="alloy">Alloy (Neutral)</option>
-                                <option value="echo">Echo (Male)</option>
-                                <option value="fable">Fable (British Male)</option>
-                                <option value="onyx">Onyx (Deep Male)</option>
-                                <option value="nova">Nova (Female)</option>
-                                <option value="shimmer">Shimmer (Soft Female)</option>
+                                <!-- Voices will be populated by JavaScript -->
                             </select>
                         </div>
 
@@ -115,19 +110,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            Generate & Play Voice
+                            Play Voice
                         </button>
                     </form>
-
-                    <!-- Audio Player -->
-                    <div id="audioPlayerContainer" class="mt-6 hidden">
-                        <div class="bg-gray-900 rounded-lg p-4 border border-gray-700">
-                            <p class="text-sm text-gray-400 mb-2">Generated Audio:</p>
-                            <audio id="audioPlayer" controls class="w-full">
-                                Your browser does not support the audio element.
-                            </audio>
-                        </div>
-                    </div>
 
                     <div id="statusMessage" class="mt-4 text-sm"></div>
                 </div>
@@ -139,7 +124,7 @@
                         <li class="flex items-start">
                             <span
                                 class="flex-shrink-0 w-6 h-6 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mr-3 mt-0.5">1</span>
-                            <span>Select a voice from OpenAI's TTS library (6 different voices available).</span>
+                            <span>Select a voice from your browser's available voices.</span>
                         </li>
                         <li class="flex items-start">
                             <span
@@ -149,19 +134,14 @@
                         <li class="flex items-start">
                             <span
                                 class="flex-shrink-0 w-6 h-6 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mr-3 mt-0.5">3</span>
-                            <span>Click "Generate & Play Voice" to create the audio.</span>
-                        </li>
-                        <li class="flex items-start">
-                            <span
-                                class="flex-shrink-0 w-6 h-6 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center mr-3 mt-0.5">4</span>
-                            <span>Listen to the generated audio directly in your browser!</span>
+                            <span>Click "Play Voice" to hear it instantly!</span>
                         </li>
                     </ul>
 
                     <div class="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                         <p class="text-sm text-blue-300">
                             <strong>💡 Tip:</strong> Try different voices to find the perfect match for your AI calling
-                            agent!
+                            agent! This uses your browser's built-in text-to-speech engine.
                         </p>
                     </div>
                 </div>
@@ -170,53 +150,73 @@
     </div>
 
     <script>
-        document.getElementById('voiceTestForm').addEventListener('submit', async (e) => {
+        // Initialize speech synthesis
+        const synth = window.speechSynthesis;
+        let voices = [];
+
+        function loadVoices() {
+            voices = synth.getVoices();
+            const voiceSelect = document.getElementById('voiceSelect');
+            voiceSelect.innerHTML = '';
+
+            // Filter for English voices and add them to the dropdown
+            const englishVoices = voices.filter(voice => voice.lang.startsWith('en'));
+
+            if (englishVoices.length === 0) {
+                voiceSelect.innerHTML = '<option>No voices available</option>';
+                return;
+            }
+
+            englishVoices.forEach((voice, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${voice.name} (${voice.lang})`;
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        // Load voices when they're ready
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = loadVoices;
+        }
+        loadVoices();
+
+        document.getElementById('voiceTestForm').addEventListener('submit', (e) => {
             e.preventDefault();
 
-            const voice = document.getElementById('voiceSelect').value;
             const text = document.getElementById('testScript').value;
+            const voiceIndex = document.getElementById('voiceSelect').value;
             const statusMessage = document.getElementById('statusMessage');
-            const audioPlayerContainer = document.getElementById('audioPlayerContainer');
-            const audioPlayer = document.getElementById('audioPlayer');
 
             if (!text) {
                 statusMessage.innerHTML = '<span class="text-red-400">Please enter some text</span>';
                 return;
             }
 
-            const btn = e.target.querySelector('button');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating...';
-            btn.disabled = true;
-            statusMessage.innerHTML = '<span class="text-blue-400">Generating audio...</span>';
+            // Cancel any ongoing speech
+            synth.cancel();
 
-            try {
-                const response = await fetch('/api/test/voice', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text, voice })
-                });
+            // Create utterance
+            const utterance = new SpeechSynthesisUtterance(text);
+            const englishVoices = voices.filter(voice => voice.lang.startsWith('en'));
+            utterance.voice = englishVoices[voiceIndex];
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
 
-                if (response.ok) {
-                    const audioBlob = await response.blob();
-                    const audioUrl = URL.createObjectURL(audioBlob);
+            utterance.onstart = () => {
+                statusMessage.innerHTML = '<span class="text-blue-400">🎤 Speaking...</span>';
+            };
 
-                    audioPlayer.src = audioUrl;
-                    audioPlayerContainer.classList.remove('hidden');
-                    audioPlayer.play();
+            utterance.onend = () => {
+                statusMessage.innerHTML = '<span class="text-green-400">✓ Playback complete!</span>';
+            };
 
-                    statusMessage.innerHTML = '<span class="text-green-400">✓ Audio generated successfully!</span>';
-                } else {
-                    const error = await response.json();
-                    statusMessage.innerHTML = `<span class="text-red-400">Error: ${error.error}</span>`;
-                }
-            } catch (error) {
-                statusMessage.innerHTML = '<span class="text-red-400">Error connecting to server</span>';
-                console.error(error);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
+            utterance.onerror = (event) => {
+                statusMessage.innerHTML = `<span class="text-red-400">Error: ${event.error}</span>`;
+            };
+
+            // Speak
+            synth.speak(utterance);
         });
     </script>
 </body>

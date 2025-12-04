@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { WebSocket } from 'ws';
 import { TelnyxService } from './services/telnyx';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -53,7 +54,7 @@ fastify.get('/api/stats', async (request, reply) => {
     };
 });
 
-// API: Test Voice (Browser-based TTS using OpenAI)
+// API: Test Voice (Browser-based TTS using Telnyx)
 fastify.post('/api/test/voice', async (request, reply) => {
     try {
         const { text, voice } = request.body as any;
@@ -62,25 +63,32 @@ fastify.post('/api/test/voice', async (request, reply) => {
             return reply.status(400).send({ error: 'Missing required field: text' });
         }
 
-        console.log(`🧪 Generating voice sample: ${voice}`);
+        console.log(`🧪 Generating voice sample with Telnyx: ${voice}`);
 
-        // Use OpenAI TTS to generate audio
-        const OpenAI = require('openai');
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-        const mp3 = await openai.audio.speech.create({
-            model: "tts-1",
-            voice: voice || "alloy",
-            input: text,
-        });
-
-        const buffer = Buffer.from(await mp3.arrayBuffer());
+        // Use Telnyx Text-to-Speech API
+        const response = await axios.post(
+            'https://api.telnyx.com/v2/ai/generate/text_to_speech',
+            {
+                text: text,
+                voice: voice || 'en-US-Neural2-A',
+                language: 'en-US'
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${process.env.TELNYX_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                responseType: 'arraybuffer'
+            }
+        );
 
         reply.header('Content-Type', 'audio/mpeg');
-        return reply.send(buffer);
+        return reply.send(Buffer.from(response.data));
     } catch (error: any) {
-        console.error('Error generating voice:', error);
-        return reply.status(500).send({ error: error.message });
+        console.error('Error generating voice:', error.response?.data || error.message);
+        return reply.status(500).send({
+            error: error.response?.data?.errors?.[0]?.detail || error.message
+        });
     }
 });
 

@@ -369,10 +369,10 @@ function broadcastStats(data: any) {
 fastify.register(async (fastify) => {
     fastify.get('/ws/dashboard', { websocket: true }, (connection: any, req) => {
         console.log('📊 Dashboard client connected');
-        dashboardClients.add(connection.socket);
+        dashboardClients.add(connection);
 
-        connection.socket.on('close', () => {
-            dashboardClients.delete(connection.socket);
+        connection.on('close', () => {
+            dashboardClients.delete(connection);
             console.log('📊 Dashboard client disconnected');
         });
     });
@@ -405,12 +405,12 @@ fastify.register(async (fastify) => {
         if (!liveCallClients.has(callId)) {
             liveCallClients.set(callId, new Set());
         }
-        liveCallClients.get(callId)!.add(connection.socket);
+        liveCallClients.get(callId)!.add(connection);
 
-        connection.socket.on('close', () => {
+        connection.on('close', () => {
             const clients = liveCallClients.get(callId);
             if (clients) {
-                clients.delete(connection.socket);
+                clients.delete(connection);
                 if (clients.size === 0) {
                     liveCallClients.delete(callId);
                 }
@@ -419,7 +419,7 @@ fastify.register(async (fastify) => {
         });
 
         // Send initial connection confirmation
-        connection.socket.send(JSON.stringify({
+        connection.send(JSON.stringify({
             type: 'connected',
             callId: callId
         }));
@@ -452,7 +452,7 @@ fastify.register(async (fastify) => {
         console.log(`🌐 Browser call client connected: ${callId}`);
 
         // Store client for broadcasting
-        browserCallClients.set(callId, connection.socket);
+        browserCallClients.set(callId, connection);
 
         let conversationLoop: ConversationLoop | null = null;
 
@@ -460,8 +460,8 @@ fastify.register(async (fastify) => {
         const onSpeak = async (text: string) => {
             try {
                 console.log(`🗣️ Sending AI response to browser: "${text}"`);
-                if (connection.socket.readyState === WebSocket.OPEN) {
-                    connection.socket.send(JSON.stringify({
+                if (connection.readyState === WebSocket.OPEN) {
+                    connection.send(JSON.stringify({
                         type: 'speak',
                         data: { text }
                     }));
@@ -472,7 +472,7 @@ fastify.register(async (fastify) => {
         };
 
         // Handle incoming messages from browser
-        connection.socket.on('message', async (message: any) => {
+        connection.on('message', async (message: any) => {
             try {
                 // Check if it's JSON (control message) or binary (audio)
                 if (typeof message === 'string' || message instanceof Buffer) {
@@ -506,7 +506,7 @@ fastify.register(async (fastify) => {
                             await conversationLoop.start(data.greeting);
                             console.log('✅ ConversationLoop started successfully');
 
-                            connection.socket.send(JSON.stringify({
+                            connection.send(JSON.stringify({
                                 type: 'started',
                                 callId
                             }));
@@ -515,7 +515,7 @@ fastify.register(async (fastify) => {
                             console.error('Stack trace:', startError instanceof Error ? startError.stack : 'No stack trace');
 
                             // Send error to client
-                            connection.socket.send(JSON.stringify({
+                            connection.send(JSON.stringify({
                                 type: 'error',
                                 error: `Failed to start conversation: ${startError instanceof Error ? startError.message : 'Unknown error'}`
                             }));
@@ -549,14 +549,14 @@ fastify.register(async (fastify) => {
 
             } catch (err) {
                 console.error('Error handling browser call message:', err);
-                connection.socket.send(JSON.stringify({
+                connection.send(JSON.stringify({
                     type: 'error',
                     error: err instanceof Error ? err.message : 'Unknown error'
                 }));
             }
         });
 
-        connection.socket.on('close', async () => {
+        connection.on('close', async () => {
             console.log(`🌐 Browser call client disconnected: ${callId}`);
             if (conversationLoop) {
                 await conversationLoop.stop();
@@ -566,7 +566,7 @@ fastify.register(async (fastify) => {
         });
 
         // Send initial connection confirmation
-        connection.socket.send(JSON.stringify({
+        connection.send(JSON.stringify({
             type: 'connected',
             callId
         }));

@@ -116,6 +116,9 @@ export class ConversationLoop extends EventEmitter {
         const userText = result.text.trim();
         console.log(`👤 User said: "${userText}"`);
 
+        // Broadcast user message to WebSocket clients
+        this.broadcastMessage('human', userText, result.confidence);
+
         // Save user message
         await this.stateManager.addMessage(this.callId, 'user', userText);
 
@@ -131,12 +134,39 @@ export class ConversationLoop extends EventEmitter {
 
         const aiResponse = await this.conversationEngine.generateResponse(context, userText);
 
+        // Broadcast AI message to WebSocket clients
+        this.broadcastMessage('ai', aiResponse, 1.0);
+
         // Save AI response
         await this.stateManager.addMessage(this.callId, 'assistant', aiResponse);
         await this.supabase.saveTranscript(this.callId, 'ai', aiResponse, 1.0);
 
         // Speak AI response
         await this.speak(aiResponse);
+    }
+
+    /**
+     * Broadcast message to WebSocket clients
+     */
+    private broadcastMessage(speaker: 'human' | 'ai', text: string, confidence: number): void {
+        try {
+            // Dynamically import to avoid circular dependency
+            import('../index').then(module => {
+                if (module.broadcastToLiveCall) {
+                    module.broadcastToLiveCall(this.callId, {
+                        type: 'transcript',
+                        data: {
+                            speaker,
+                            text,
+                            timestamp: new Date().toISOString(),
+                            confidence
+                        }
+                    });
+                }
+            });
+        } catch (error) {
+            console.error('Error broadcasting message:', error);
+        }
     }
 
     /**

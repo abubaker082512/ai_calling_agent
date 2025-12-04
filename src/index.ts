@@ -92,6 +92,79 @@ fastify.post('/api/test/voice', async (request, reply) => {
     }
 });
 
+// API: Start Test Call
+fastify.post('/api/test-call/start', async (request, reply) => {
+    try {
+        const { to, from, agentConfig } = request.body as any;
+
+        if (!to || !from) {
+            return reply.status(400).send({ error: 'Missing required fields: to, from' });
+        }
+
+        console.log(`🧪 Starting test call to ${to}`);
+
+        // Make call with agent config in client state
+        await telnyxService.makeCall(to, from, {
+            type: 'test_call',
+            agentConfig: agentConfig || {}
+        });
+
+        return reply.send({
+            success: true,
+            message: 'Test call initiated'
+        });
+    } catch (error: any) {
+        console.error('Error starting test call:', error);
+        return reply.status(500).send({ error: error.message });
+    }
+});
+
+// API: Hangup Test Call
+fastify.post('/api/test-call/hangup', async (request, reply) => {
+    try {
+        const { callControlId } = request.body as any;
+
+        if (!callControlId) {
+            return reply.status(400).send({ error: 'Missing callControlId' });
+        }
+
+        console.log(`🛑 Hanging up test call: ${callControlId}`);
+
+        await telnyxService.hangupCall(callControlId);
+
+        return reply.send({
+            success: true,
+            message: 'Call ended'
+        });
+    } catch (error: any) {
+        console.error('Error hanging up call:', error);
+        return reply.status(500).send({ error: error.message });
+    }
+});
+
+// API: Get Call Transcript
+fastify.get('/api/test-call/:callId/transcript', async (request, reply) => {
+    try {
+        const { callId } = request.params as any;
+        const { SupabaseService } = await import('./services/supabase');
+        const supabase = new SupabaseService();
+
+        const transcripts = await supabase.client
+            .from('call_transcripts')
+            .select('*')
+            .eq('call_id', callId)
+            .order('timestamp', { ascending: true });
+
+        return reply.send({
+            success: true,
+            messages: transcripts.data || []
+        });
+    } catch (error: any) {
+        console.error('Error fetching transcript:', error);
+        return reply.status(500).send({ error: error.message });
+    }
+});
+
 // Store active conversation loops
 const activeConversations = new Map<string, any>();
 
@@ -302,6 +375,54 @@ fastify.register(async (fastify) => {
             dashboardClients.delete(connection.socket);
             console.log('📊 Dashboard client disconnected');
         });
+    });
+});
+
+// Live Call WebSocket (for real-time transcription)
+const liveCallClients = new Map<string, Set<any>>();
+
+export function broadcastToLiveCall(callId: string, data: any) {
+    const clients = liveCallClients.get(callId);
+    if (clients) {
+        clients.forEach(client => {
+            try {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify(data));
+                }
+            } catch (err) {
+                console.error('Error broadcasting to live call client:', err);
+            }
+        });
+    }
+}
+
+fastify.register(async (fastify) => {
+    fastify.get('/ws/live-call/:callId', { websocket: true }, (connection: any, req) => {
+        const callId = (req.params as any).callId;
+        console.log(`📞 Live call client connected for call: ${callId}`);
+
+        // Add client to call-specific set
+        if (!liveCallClients.has(callId)) {
+            liveCallClients.set(callId, new Set());
+        }
+        liveCallClients.get(callId)!.add(connection.socket);
+
+        connection.socket.on('close', () => {
+            const clients = liveCallClients.get(callId);
+            if (clients) {
+                clients.delete(connection.socket);
+                if (clients.size === 0) {
+                    liveCallClients.delete(callId);
+                }
+            }
+            console.log(`📞 Live call client disconnected for call: ${callId}`);
+        });
+
+        // Send initial connection confirmation
+        connection.socket.send(JSON.stringify({
+            type: 'connected',
+            callId: callId
+        }));
     });
 });
 

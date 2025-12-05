@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from 'openai';
 import EventEmitter from 'events';
 
 export interface Message {
@@ -19,70 +19,76 @@ export interface ConversationContext {
 }
 
 export class ConversationEngine extends EventEmitter {
-    private genAI: GoogleGenerativeAI;
-    private model: any;
-    private modelName: string;
+    private openai: OpenAI;
+    private model: string;
+    private maxTokens: number;
+    private temperature: number;
 
     constructor() {
         super();
 
-        const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+        const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
-            console.error('❌ GEMINI_API_KEY is missing');
-            throw new Error('GEMINI_API_KEY is required');
+            console.error('❌ OPENAI_API_KEY is missing');
+            throw new Error('OPENAI_API_KEY is required');
         }
 
-        this.genAI = new GoogleGenerativeAI(apiKey);
-        this.modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest';
-        this.model = this.genAI.getGenerativeModel({
-            model: this.modelName,
-            generationConfig: {
-                temperature: 0.7,
-                maxOutputTokens: 150,
-            }
-        });
-
-        console.log(`✅ Gemini AI initialized with model: ${this.modelName}`);
+        this.openai = new OpenAI({ apiKey });
+        // Using gpt-4o (latest model as of Dec 2024)
+        this.model = process.env.OPENAI_MODEL || 'gpt-4o';
+        this.maxTokens = 150; // Keep responses concise for natural conversation
+        this.temperature = 0.7; // Balance between creativity and consistency
     }
 
+    /**
+     * Generate AI response based on conversation context
+     */
     async generateResponse(context: ConversationContext, userMessage: string): Promise<string> {
         try {
             console.log(`🤖 Generating AI response for: "${userMessage}"`);
 
-            const conversationHistory = context.messages
-                .slice(-10)
-                .map(msg => {
-                    const role = msg.role === 'assistant' ? 'Assistant' : 'User';
-                    return `${role}: ${msg.content}`;
-                })
-                .join('\n');
+            // Add user message to context
+            const messages: Message[] = [
+                { role: 'system', content: context.systemPrompt },
+                ...context.messages,
+                { role: 'user', content: userMessage, timestamp: new Date() }
+            ];
 
-            const fullPrompt = `${context.systemPrompt}
+            // Keep only last 10 messages to manage context window
+            const recentMessages = messages.slice(-11); // 1 system + 10 conversation messages
 
-${conversationHistory ? `Conversation so far:\n${conversationHistory}\n\n` : ''}User: ${userMessage}
-
-            Assistant: `;
-
-            const result = await this.model.generateContent(fullPrompt);
-            const response = result.response;
-            const text = response.text();
-
-            if (!text || text.trim().length === 0) {
-                throw new Error('Empty response from Gemini');
-            }
-
-            console.log(` AI response: "${text}"`);
-
-            this.emit('response', {
-                text: text,
-                tokens: 0
+            // Call OpenAI API
+            const completion = await this.openai.chat.completions.create({
+                model: this.model,
+                messages: recentMessages.map(m => ({
+                    role: m.role,
+                    content: m.content
+                })),
+                max_tokens: this.maxTokens,
+                temperature: this.temperature,
+                stream: false
             });
 
-            return text;
+            const response = completion.choices[0]?.message?.content || '';
+
+            if (!response) {
+                throw new Error('Empty response from OpenAI');
+            }
+
+            console.log(`✅ AI response: "${response}"`);
+
+            // Emit response event
+            this.emit('response', {
+                text: response,
+                tokens: completion.usage?.total_tokens || 0
+            });
+
+            return response;
 
         } catch (error: any) {
-            console.error(' Error generating AI response:', error);
+            console.error('❌ Error generating AI response:', error);
 
+            // Fallback response
             const fallbackResponse = "I apologize, I'm having trouble processing that. Could you please repeat?";
 
             this.emit('error', error);
@@ -90,14 +96,55 @@ ${conversationHistory ? `Conversation so far:\n${conversationHistory}\n\n` : ''}
         }
     }
 
+    /**
+     * Generate streaming response (for future enhancement)
+     */
     async generateStreamingResponse(
         context: ConversationContext,
         userMessage: string,
         onChunk: (chunk: string) => void
     ): Promise<string> {
-        return this.generateResponse(context, userMessage);
+        try {
+            const messages: Message[] = [
+                { role: 'system', content: context.systemPrompt },
+                ...context.messages,
+                { role: 'user', content: userMessage }
+            ];
+
+            const recentMessages = messages.slice(-11);
+
+            const stream = await this.openai.chat.completions.create({
+                model: this.model,
+                messages: recentMessages.map(m => ({
+                    role: m.role,
+                    content: m.content
+                })),
+                max_tokens: this.maxTokens,
+                temperature: this.temperature,
+                stream: true
+            });
+
+            let fullResponse = '';
+
+            for await (const chunk of stream) {
+                const content = chunk.choices[0]?.delta?.content || '';
+                if (content) {
+                    fullResponse += content;
+                    onChunk(content);
+                }
+            }
+
+            return fullResponse;
+
+        } catch (error) {
+            console.error('❌ Error in streaming response:', error);
+            throw error;
+        }
     }
 
+    /**
+     * Create default system prompt
+     */
     static createSystemPrompt(purpose: string = 'general assistant'): string {
         return `You are a helpful AI assistant speaking with a customer over the phone.
 
@@ -115,14 +162,19 @@ Purpose: ${purpose}
 Remember: You are having a voice conversation, so keep responses brief and conversational.`;
     }
 
+    /**
+     * Validate response for phone conversation
+     */
     private validateResponse(response: string): boolean {
+        // Check if response is too long (more than 3 sentences)
         const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 0);
         if (sentences.length > 3) {
-            console.warn(' Response too long, consider breaking it up');
+            console.warn('⚠️ Response too long, consider breaking it up');
         }
 
+        // Check if response is too short
         if (response.trim().length < 5) {
-            console.warn(' Response too short');
+            console.warn('⚠️ Response too short');
             return false;
         }
 

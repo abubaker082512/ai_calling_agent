@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { WebSocket } from 'ws';
 import { TelnyxService } from './services/telnyx';
+import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 
 dotenv.config();
@@ -448,7 +449,7 @@ export function broadcastToBrowserCall(callId: string, data: any) {
 
 fastify.register(async (fastify) => {
     fastify.get('/ws/browser-call', { websocket: true }, (connection: any, req) => {
-        const callId = 'browser_' + Date.now();
+        const callId = uuidv4();
         console.log(`🌐 Browser call client connected: ${callId}`);
 
         // Store client for broadcasting

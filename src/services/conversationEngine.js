@@ -41,7 +41,36 @@ class ConversationEngine extends EventEmitter {
     }
 
     async generateStreamingResponse(context, userMessage, onChunk) {
-        return this.generateResponse(context, userMessage);
+        try {
+            console.log(`🤖 Generating streaming AI response for: "${userMessage}"`);
+            const conversationHistory = context.messages.slice(-10).map(msg => {
+                const role = msg.role === 'assistant' ? 'Assistant' : 'User';
+                return `${role}: ${msg.content}`;
+            }).join('\n');
+            const fullPrompt = `${context.systemPrompt}\n\n${conversationHistory ? `Conversation so far:\n${conversationHistory}\n\n` : ''}User: ${userMessage}\n\nAssistant:`;
+
+            const result = await this.model.generateContentStream(fullPrompt);
+
+            let fullText = '';
+            for await (const chunk of result.stream) {
+                const chunkText = chunk.text();
+                if (chunkText) {
+                    fullText += chunkText;
+                    onChunk(chunkText);
+                }
+            }
+
+            console.log(`✅ Completing streaming response: "${fullText}"`);
+            this.emit('response', { text: fullText, tokens: 0 });
+            return fullText;
+
+        } catch (error) {
+            console.error('❌ Error generating streaming AI response:', error);
+            const fallbackResponse = "I apologize, I'm having trouble processing that. Could you please repeat?";
+            this.emit('error', error);
+            onChunk(fallbackResponse);
+            return fallbackResponse;
+        }
     }
 
     static createSystemPrompt(purpose = 'general assistant') {

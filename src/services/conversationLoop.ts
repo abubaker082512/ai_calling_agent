@@ -145,17 +145,50 @@ export class ConversationLoop extends EventEmitter {
             return;
         }
 
-        const aiResponse = await this.conversationEngine.generateResponse(context, userText);
+        let fullResponse = '';
+        let sentenceBuffer = '';
+        this.isAISpeaking = true; // Set speaking flag at start
 
-        // Broadcast AI message to WebSocket clients
-        this.broadcastMessage('ai', aiResponse, 1.0);
+        try {
+            await this.conversationEngine.generateStreamingResponse(context, userText, (chunk: string) => {
+                fullResponse += chunk;
+                sentenceBuffer += chunk;
+
+                // Check for sentence delimiters (English)
+                if (sentenceBuffer.match(/[.!?]+["']?\s*$/)) {
+                    const sentence = sentenceBuffer.trim();
+                    if (sentence.length > 0) {
+                        console.log(`🗣️ Speaking sentence chunk: "${sentence}"`);
+                        // Speak this sentence immediately (don't await to avoid blocking stream)
+                        this.speak(sentence).catch(err => console.error('Error speaking chunk:', err));
+                    }
+                    sentenceBuffer = '';
+                }
+            });
+
+            // Handle any remaining text in buffer
+            if (sentenceBuffer.trim().length > 0) {
+                const sentence = sentenceBuffer.trim();
+                console.log(`🗣️ Speaking final chunk: "${sentence}"`);
+                await this.speak(sentence);
+            }
+
+            // Estimate completion time to reset speaking flag (rough estimate 50ms/char)
+            // Note: speak() already does some waiting, but for streaming we might have concurrent speak calls
+            // This flag logic might need refinement for perfect overlap protection
+
+        } catch (error) {
+            console.error('Error in streaming response:', error);
+            this.isAISpeaking = false;
+        }
+
+        // Broadcast full AI transcript for UI
+        this.broadcastMessage('ai', fullResponse, 1.0);
 
         // Save AI response
-        await this.stateManager.addMessage(this.callId, 'assistant', aiResponse);
-        await this.supabase.saveTranscript(this.callId, 'ai', aiResponse, 1.0);
+        await this.stateManager.addMessage(this.callId, 'assistant', fullResponse);
+        await this.supabase.saveTranscript(this.callId, 'ai', fullResponse, 1.0);
 
-        // Speak AI response
-        await this.speak(aiResponse);
     }
 
     /**

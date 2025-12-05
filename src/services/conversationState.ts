@@ -116,7 +116,8 @@ export class ConversationStateManager {
                 systemPrompt: "You are a helpful AI assistant.",
                 metadata: {
                     startTime: new Date(),
-                    callerPhone: 'unknown'
+                    callerPhone: 'unknown',
+                    callPurpose: 'browser-test'
                 }
             };
         }

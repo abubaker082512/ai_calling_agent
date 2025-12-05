@@ -172,8 +172,18 @@ export class ConversationStateManager {
         const context = await this.getContext(callId);
 
         if (context) {
-            // Delete from Redis
-            await this.redis.del(`conversation:${callId}`);
+            // Delete from memory cache
+            this.memoryCache.delete(callId);
+
+            // Try to delete from Redis if available
+            if (!this.useMemoryFallback) {
+                try {
+                    await this.redis.del(`conversation:${callId}`);
+                } catch (error) {
+                    console.log(`⚠️ Could not delete from Redis (non-fatal): ${callId}`);
+                    // Don't throw - memory is already cleaned up
+                }
+            }
             console.log(`✅ Ended conversation session: ${callId}`);
         }
 

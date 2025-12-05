@@ -85,8 +85,13 @@ export class ConversationEngine extends EventEmitter {
             this.emit('response', { text: fullText, tokens: 0 });
             return fullText;
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('❌ Error generating streaming AI response:', error);
+            if (error.response) {
+                console.error('API Error Details:', JSON.stringify(error.response, null, 2));
+            } else if (error.message && error.message.includes('API key')) {
+                console.error('🚨 API KEY ERROR: Check your GEMINI_API_KEY');
+            }
             this.emit('error', error);
             const fallback = "I'm having a little trouble connecting. Can you hear me?";
             onChunk(fallback);

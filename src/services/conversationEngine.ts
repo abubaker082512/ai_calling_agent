@@ -34,6 +34,7 @@ export class ConversationEngine extends EventEmitter {
         }
 
         this.openai = new OpenAI({ apiKey });
+        // Using gpt-4o (latest model as of Dec 2024)
         this.model = process.env.OPENAI_MODEL || 'gpt-4o';
         this.maxTokens = 150; // Keep responses concise for natural conversation
         this.temperature = 0.7; // Balance between creativity and consistency

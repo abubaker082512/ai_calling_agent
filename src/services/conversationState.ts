@@ -4,7 +4,8 @@ import { ConversationContext, Message } from './conversationEngine';
 export class ConversationStateManager {
     private redis: RedisService;
     private readonly TTL = 3600; // 1 hour session timeout
-    private memoryStore: Map<string, ConversationContext> = new Map();
+    private memoryCache: Map<string, ConversationContext> = new Map(); // In-memory fallback
+    private useMemoryFallback: boolean = false;
 
     constructor() {
         this.redis = new RedisService();
@@ -34,12 +35,25 @@ export class ConversationStateManager {
      * Get conversation context
      */
     async getContext(callId: string): Promise<ConversationContext | null> {
+        // Try memory cache first if Redis is unavailable
+        if (this.useMemoryFallback) {
+            const cached = this.memoryCache.get(callId);
+            if (cached) {
+                return cached;
+            }
+            return null;
+        }
+
         try {
             const data = await this.redis.get(`conversation:${callId}`);
 
             if (!data) {
-                // Fallback to memory store
-                return this.memoryStore.get(callId) || null;
+                // Check memory fallback
+                const cached = this.memoryCache.get(callId);
+                if (cached) {
+                    return cached;
+                }
+                return null;
             }
 
             const context = JSON.parse(data);
@@ -54,8 +68,13 @@ export class ConversationStateManager {
 
             return context;
         } catch (error) {
-            console.warn(`⚠️ Redis error getting context for ${callId}, using memory store:`, error);
-            return this.memoryStore.get(callId) || null;
+            console.error(`❌ Error getting conversation context for ${callId}:`, error);
+
+            // Fallback to memory cache
+            console.log(`📝 Using memory fallback for ${callId}`);
+            this.useMemoryFallback = true;
+            const cached = this.memoryCache.get(callId);
+            return cached || null;
         }
     }
 
@@ -63,17 +82,22 @@ export class ConversationStateManager {
      * Save conversation context
      */
     async saveContext(callId: string, context: ConversationContext): Promise<void> {
-        // Always save to memory store as backup
-        this.memoryStore.set(callId, context);
+        // Always save to memory cache
+        this.memoryCache.set(callId, context);
 
-        try {
-            await this.redis.set(
-                `conversation:${callId}`,
-                JSON.stringify(context),
-                this.TTL
-            );
-        } catch (error) {
-            console.warn(`⚠️ Redis error saving context for ${callId}, using memory store:`, error);
+        // Try to save to Redis if available
+        if (!this.useMemoryFallback) {
+            try {
+                await this.redis.set(
+                    `conversation:${callId}`,
+                    JSON.stringify(context),
+                    this.TTL
+                );
+            } catch (error) {
+                console.error(`❌ Error saving conversation context for ${callId}:`, error);
+                console.log(`📝 Falling back to memory-only storage for ${callId}`);
+                this.useMemoryFallback = true;
+            }
         }
     }
 
@@ -81,11 +105,20 @@ export class ConversationStateManager {
      * Add message to conversation
      */
     async addMessage(callId: string, role: 'user' | 'assistant', content: string): Promise<void> {
-        const context = await this.getContext(callId);
+        let context = await this.getContext(callId);
 
         if (!context) {
-            console.error(`❌ No conversation context found for ${callId}`);
-            return;
+            console.warn(`⚠️ No conversation context found for ${callId}, creating new context`);
+            // Create a minimal context on-the-fly
+            context = {
+                callId,
+                messages: [],
+                systemPrompt: "You are a helpful AI assistant.",
+                metadata: {
+                    startTime: new Date(),
+                    callerPhone: 'unknown'
+                }
+            };
         }
 
         const message: Message = {
@@ -139,15 +172,7 @@ export class ConversationStateManager {
 
         if (context) {
             // Delete from Redis
-            try {
-                await this.redis.del(`conversation:${callId}`);
-            } catch (error) {
-                console.warn(`⚠️ Redis error deleting context for ${callId}:`, error);
-            }
-
-            // Delete from memory
-            this.memoryStore.delete(callId);
-
+            await this.redis.del(`conversation:${callId}`);
             console.log(`✅ Ended conversation session: ${callId}`);
         }
 
@@ -158,28 +183,15 @@ export class ConversationStateManager {
      * Get active sessions count
      */
     async getActiveSessionsCount(): Promise<number> {
-        try {
-            const keys = await this.redis.keys('conversation:*');
-            return keys.length;
-        } catch (error) {
-            console.warn('⚠️ Redis error getting keys, returning memory store size:', error);
-            return this.memoryStore.size;
-        }
+        const keys = await this.redis.keys('conversation:*');
+        return keys.length;
     }
 
     /**
      * Clean up expired sessions (called periodically)
      */
     async cleanup(): Promise<void> {
-        // Redis TTL handles this automatically for Redis
-        // For memory store, we could implement cleanup logic here if needed
-        // For now, we'll rely on server restarts or manual cleanup
-        const now = new Date().getTime();
-        for (const [key, context] of this.memoryStore.entries()) {
-            if (now - context.metadata.startTime.getTime() > this.TTL * 1000) {
-                this.memoryStore.delete(key);
-            }
-        }
-        console.log('🧹 Conversation cleanup completed');
+        // Redis TTL handles this automatically
+        console.log('🧹 Conversation cleanup completed (handled by Redis TTL)');
     }
 }

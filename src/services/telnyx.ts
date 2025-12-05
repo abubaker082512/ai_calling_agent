@@ -1,5 +1,6 @@
 import telnyx from 'telnyx';
 import EventEmitter from 'events';
+import axios from 'axios';
 
 export class TelnyxService extends EventEmitter {
     private client: any;
@@ -118,6 +119,30 @@ export class TelnyxService extends EventEmitter {
             return call;
         } catch (error) {
             console.error('Error making outbound call:', error);
+            throw error;
+        }
+    }
+
+    public async generateVoice(text: string, voice: string = 'en-US-Neural2-F'): Promise<Buffer> {
+        try {
+            const response = await axios.post(
+                'https://api.telnyx.com/v2/ai/generate/text_to_speech',
+                {
+                    text: text,
+                    voice: voice,
+                    language: 'en-US'
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    responseType: 'arraybuffer'
+                }
+            );
+            return Buffer.from(response.data);
+        } catch (error: any) {
+            console.error('Error generating voice:', error.response?.data || error.message);
             throw error;
         }
     }

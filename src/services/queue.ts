@@ -18,7 +18,8 @@ export class QueueService {
         new Worker('outbound-calls', async (job) => {
             console.log(`Processing job ${job.id}: Calling ${job.data.to}`);
             try {
-                await this.telnyxService.makeCall(job.data.to, job.data.from);
+                // Pass clientState (agentConfig) to makeCall
+                await this.telnyxService.makeCall(job.data.to, job.data.from, job.data.clientState);
             } catch (error) {
                 console.error(`Job ${job.id} failed:`, error);
                 throw error;
@@ -26,14 +27,20 @@ export class QueueService {
         }, { connection: redisConnection });
     }
 
-    public async addCallJob(to: string, from: string, delay: number = 0) {
-        await this.callQueue.add('make-call', { to, from }, { delay });
+    public async addCallJob(to: string, from: string, clientState: any = {}, delay: number = 0) {
+        await this.callQueue.add('make-call', { to, from, clientState }, { delay });
         console.log(`Added call job for ${to} with delay ${delay}ms`);
     }
 
-    public async addCampaign(numbers: string[], from: string) {
+    public async addCampaign(numbers: string[], from: string, agentConfig: any = {}) {
         for (const number of numbers) {
-            await this.addCallJob(number, from, Math.random() * 10000); // Stagger calls
+            // Stagger calls by 5 seconds to avoid rate limits
+            const delay = Math.random() * 10000;
+
+            await this.addCallJob(number, from, {
+                type: 'campaign_call',
+                agentConfig
+            }, delay);
         }
     }
 }

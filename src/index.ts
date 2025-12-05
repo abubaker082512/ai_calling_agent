@@ -13,6 +13,15 @@ dotenv.config();
 
 const { PORT = 3000 } = process.env;
 const telnyxService = new TelnyxService();
+// Initialize Queue Service (lazy load to avoid Redis connection errors on startup if Redis is down)
+let queueService: any = null;
+import { QueueService } from './services/queue';
+try {
+    queueService = new QueueService(telnyxService);
+    console.log('✅ QueueService initialized');
+} catch (e) {
+    console.error('⚠️ Failed to initialize QueueService (Redis might be down):', e);
+}
 
 // Stats tracking
 let stats = {
@@ -196,7 +205,8 @@ fastify.post('/telnyx/inbound', async (request, reply) => {
                     callId,
                     callControlId: payload.call_control_id,
                     callerPhone: payload.from,
-                    purpose: 'customer support'
+                    purpose: 'customer support',
+                    callType: 'phone'
                 });
 
                 // Store the conversation loop
@@ -330,13 +340,23 @@ fastify.get('/api/calls', async (request, reply) => {
 // API: Create Campaign
 fastify.post('/api/campaigns', async (request, reply) => {
     try {
-        const { name, contacts } = request.body as any;
+        const { name, contacts, agentConfig } = request.body as any;
 
-        if (!name || !contacts) {
-            return reply.status(400).send({ error: 'Missing required fields' });
+        if (!name || !contacts || !Array.isArray(contacts)) {
+            return reply.status(400).send({ error: 'Missing required fields or invalid contacts array' });
+        }
+
+        if (!queueService) {
+            return reply.status(503).send({ error: 'Queue service not available (Redis down?)' });
         }
 
         const campaignId = `campaign_${Date.now()}`;
+        const from = process.env.TELNYX_PHONE_NUMBER || '+15550000000';
+
+        console.log(`🚀 Starting campaign "${name}" with ${contacts.length} contacts`);
+
+        // Trigger campaign processing
+        await queueService.addCampaign(contacts, from, agentConfig);
 
         return reply.send({
             success: true,
@@ -344,10 +364,12 @@ fastify.post('/api/campaigns', async (request, reply) => {
                 id: campaignId,
                 name,
                 total_contacts: contacts.length,
-                status: 'created'
+                status: 'processing',
+                message: `Campaign started. Queued ${contacts.length} calls.`
             }
         });
     } catch (error: any) {
+        console.error('Error creating campaign:', error);
         return reply.status(500).send({ error: error.message });
     }
 });
@@ -457,18 +479,31 @@ fastify.register(async (fastify) => {
 
         let conversationLoop: ConversationLoop | null = null;
 
-        // Custom speak handler that sends text to browser
+        // Custom speak handler that sends audio to browser
         const onSpeak = async (text: string) => {
             try {
-                console.log(`🗣️ Sending AI response to browser: "${text}"`);
+                console.log(`🗣️ Generating AI voice for browser: "${text}"`);
+                // Generate audio using Telnyx (high quality voice)
+                const audioBuffer = await telnyxService.generateVoice(text, 'en-US-Neural2-F');
+
+                if (connection.readyState === WebSocket.OPEN) {
+                    connection.send(JSON.stringify({
+                        type: 'audio_playback',
+                        data: {
+                            audio: audioBuffer.toString('base64'),
+                            text
+                        }
+                    }));
+                }
+            } catch (err) {
+                console.error('Error sending speak to browser (fallback to text):', err);
+                // Fallback to text-based TTS if generation fails
                 if (connection.readyState === WebSocket.OPEN) {
                     connection.send(JSON.stringify({
                         type: 'speak',
                         data: { text }
                     }));
                 }
-            } catch (err) {
-                console.error('Error sending speak to browser:', err);
             }
         };
 
@@ -498,7 +533,8 @@ fastify.register(async (fastify) => {
                                 callControlId: callId, // Use callId as fake control ID
                                 callerPhone: 'browser',
                                 greeting: data.greeting,
-                                onSpeak
+                                onSpeak,
+                                callType: 'browser'
                             });
 
                             browserCallLoops.set(callId, conversationLoop);
@@ -574,6 +610,62 @@ fastify.register(async (fastify) => {
             type: 'connected',
             callId
         }));
+    });
+});
+
+// Media Stream WebSocket (for Telnyx audio)
+fastify.register(async (fastify) => {
+    fastify.get('/media/telnyx', { websocket: true }, (connection: any, req) => {
+        console.log('📞 Telnyx media stream connected');
+
+        let callControlId: string | null = null;
+        let conversationLoop: any = null;
+
+        connection.on('message', async (message: any) => {
+            try {
+                // Parse message (Telnyx sends JSON string)
+                const text = message.toString();
+
+                // Some events are JSON, media payload might be wrapped or separate
+                if (text.includes('"event":') || text.trim().startsWith('{')) {
+                    try {
+                        const data = JSON.parse(text);
+
+                        if (data.event === 'start') {
+                            callControlId = data.start.call_control_id;
+                            console.log(`📞 Media stream started for: ${callControlId}`);
+
+                            // Find active conversation loop
+                            if (callControlId) {
+                                conversationLoop = activeConversations.get(callControlId);
+                                if (!conversationLoop) {
+                                    console.warn(`⚠️ No active conversation found for ${callControlId}`);
+                                } else {
+                                    console.log(`✅ Attached to conversation loop for ${callControlId}`);
+                                }
+                            }
+                        } else if (data.event === 'media' && conversationLoop) {
+                            // Extract payload (PCMU/8000 encoded in base64)
+                            if (data.media && data.media.payload) {
+                                const audioBuffer = Buffer.from(data.media.payload, 'base64');
+                                await conversationLoop.processAudio(audioBuffer);
+                            }
+                        } else if (data.event === 'stop') {
+                            console.log(`📞 Media stream stopped for: ${callControlId}`);
+                            conversationLoop = null;
+                        }
+                    } catch (e) {
+                        // Ignore if not valid JSON
+                    }
+                }
+            } catch (error) {
+                console.error('Error handling Telnyx media message:', error);
+            }
+        });
+
+        connection.on('close', () => {
+            console.log(`📞 Telnyx media stream closed for ${callControlId}`);
+        });
     });
 });
 

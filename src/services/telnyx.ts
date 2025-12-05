@@ -142,7 +142,7 @@ export class TelnyxService extends EventEmitter {
             );
             return Buffer.from(response.data);
         } catch (error: any) {
-            console.error('Error generating voice:', error.response?.data || error.message);
+            console.error('❌ Error generating voice:', error.response?.data ? JSON.stringify(error.response.data, null, 2) : error.message);
             throw error;
         }
     }

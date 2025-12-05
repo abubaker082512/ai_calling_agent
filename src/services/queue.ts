@@ -10,6 +10,13 @@ export class QueueService {
         const redisConnection = {
             host: process.env.REDIS_HOST || 'localhost',
             port: Number(process.env.REDIS_PORT) || 6379,
+            retryStrategy: (times: number) => {
+                if (times > 5) {
+                    console.warn('Queue Redis connection failed. Retrying in 10s...');
+                    return 10000;
+                }
+                return Math.min(times * 100, 3000);
+            }
         };
 
         this.callQueue = new Queue('outbound-calls', { connection: redisConnection });

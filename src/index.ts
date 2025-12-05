@@ -213,7 +213,7 @@ fastify.post('/telnyx/inbound', async (request, reply) => {
                 activeConversations.set(payload.call_control_id, conversationLoop);
 
                 // Start the conversation
-                await conversationLoop.start("Hello! I'm an AI assistant. How can I help you today?");
+                await conversationLoop.start("Hello! How can I help you today?");
 
                 // Listen for conversation events
                 conversationLoop.on('error', (error) => {

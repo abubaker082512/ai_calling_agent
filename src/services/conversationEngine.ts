@@ -87,15 +87,10 @@ export class ConversationEngine extends EventEmitter {
 
         } catch (error) {
             console.error('❌ Error generating streaming AI response:', error);
-            // Don't send a robotic interruption if it fails mid-stream or at start
-            // Just emit error so we can debug.
-            // If absolutely nothing was sent, maybe send a short error message.
             this.emit('error', error);
-
-            // Only send fallback if we know what happened, usually silence is better than "I apologize" loop
-            // But let's send a very short, natural error acknowledgment if needed.
-            // onChunk("Hmm, I lost my train of thought. Say that again?");
-            return '';
+            const fallback = "I'm having a little trouble connecting. Can you hear me?";
+            onChunk(fallback);
+            return fallback;
         }
     }
 

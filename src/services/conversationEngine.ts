@@ -33,7 +33,7 @@ export class ConversationEngine extends EventEmitter {
         }
 
         this.genAI = new GoogleGenerativeAI(apiKey);
-        this.modelName = process.env.GEMINI_MODEL || 'gemini-pro';
+        this.modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash-latest';
         this.model = this.genAI.getGenerativeModel({
             model: this.modelName,
             generationConfig: {

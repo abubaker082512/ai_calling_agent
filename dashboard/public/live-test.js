@@ -226,7 +226,7 @@ async function startBrowserCall() {
         ws.onopen = () => {
             console.log('Browser call WebSocket connected');
 
-            // Send start message with proper greeting
+            // Send start message
             const startMessage = {
                 type: 'start',
                 greeting: "Hello! I'm an AI assistant. How can I help you today?"
@@ -256,31 +256,34 @@ async function startBrowserCall() {
             stopBrowserCall();
         };
 
-        // Start recording and sending audio
-        mediaRecorder = new MediaRecorder(audioStream, {
-            mimeType: 'audio/webm;codecs=opus'
-        });
+        // Use AudioContext for raw PCM audio capture
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+        const source = audioContext.createMediaStreamSource(audioStream);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0 && ws && ws.readyState === WebSocket.OPEN) {
-                console.log('🎤 Audio chunk available, size:', event.data.size);
-                // Convert blob to base64 and send
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    const base64 = reader.result.split(',')[1];
-                    console.log('📤 Sending audio chunk, base64 length:', base64?.length || 0);
-                    ws.send(JSON.stringify({
-                        type: 'audio',
-                        audio: base64
-                    }));
-                };
-                reader.readAsDataURL(event.data);
-            } else {
-                console.warn('⚠️ Cannot send audio - WebSocket not open or no data');
+        source.connect(processor);
+        processor.connect(audioContext.destination);
+
+        processor.onaudioprocess = (e) => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const inputData = e.inputBuffer.getChannelData(0);
+
+                // Convert Float32Array to Int16Array (PCM 16-bit)
+                const pcmData = new Int16Array(inputData.length);
+                for (let i = 0; i < inputData.length; i++) {
+                    const s = Math.max(-1, Math.min(1, inputData[i]));
+                    pcmData[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                }
+
+                // Send raw PCM audio
+                console.log('🎤 Sending PCM audio chunk, size:', pcmData.byteLength);
+                ws.send(pcmData.buffer);
             }
         };
 
-        mediaRecorder.start(100); // Send chunks every 100ms
+        // Store for cleanup
+        window.browserCallAudioContext = audioContext;
+        window.browserCallProcessor = processor;
 
         updateCallStatus('connected');
         showStatus('Browser call active - speak now!', 'success');
@@ -347,6 +350,17 @@ function speakText(text) {
 // Stop Browser Call
 function stopBrowserCall() {
     console.log('Stopping browser call...');
+
+    // Clean up AudioContext
+    if (window.browserCallProcessor) {
+        window.browserCallProcessor.disconnect();
+        window.browserCallProcessor = null;
+    }
+
+    if (window.browserCallAudioContext) {
+        window.browserCallAudioContext.close();
+        window.browserCallAudioContext = null;
+    }
 
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();

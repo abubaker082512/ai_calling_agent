@@ -89,12 +89,12 @@ export class ConversationLoop extends EventEmitter {
             });
 
             // Start Deepgram stream with appropriate encoding
-            // Browser calls use opus, phone calls use mulaw
+            // Browser calls use linear16 PCM, phone calls use mulaw
             if (this.callId.startsWith('browser_')) {
-                console.log('🌐 Browser call detected - using opus encoding');
+                console.log('🌐 Browser call detected - using linear16 PCM encoding');
                 await this.deepgram.startStream({
-                    encoding: 'opus',
-                    sampleRate: 48000 // Opus typically uses 48kHz
+                    encoding: 'linear16',
+                    sampleRate: 16000 // 16kHz PCM from browser AudioContext
                 });
             } else {
                 console.log('📞 Phone call detected - using mulaw encoding');

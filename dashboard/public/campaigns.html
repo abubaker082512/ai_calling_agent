@@ -93,25 +93,11 @@
         <div class="content">
             <div class="dialer-card">
                 <h2>Create New Campaign</h2>
-                <div class="dialer-input-group" style="flex-direction: column; max-width: 100%; gap: 12px;">
+                <div class="dialer-input-group" style="flex-direction: column; max-width: 100%;">
                     <input type="text" id="campaign-name" placeholder="Campaign Name" class="dialer-input">
                     <textarea id="campaign-contacts"
-                        placeholder="Contacts (JSON format: [{&quot;phone_number&quot;:&quot;+123...&quot;}] or [&quot;+123...&quot;])"
-                        class="dialer-input" style="height: 100px; font-family: monospace;"></textarea>
-
-                    <!-- Agent Config -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <input type="text" id="system-prompt"
-                            placeholder="System Prompt (e.g. You are a sales agent...)" class="dialer-input"
-                            value="You are a helpful assistant.">
-                        <select id="voice-select" class="dialer-input">
-                            <option value="en-US-Neural2-F">Female (Neural)</option>
-                            <option value="en-US-Neural2-D">Male (Neural)</option>
-                            <option value="en-US-Standard-C">Female (Standard)</option>
-                            <option value="en-US-Standard-B">Male (Standard)</option>
-                        </select>
-                    </div>
-
+                        placeholder="Contacts (JSON format: [{&quot;name&quot;:&quot;John&quot;, &quot;phone_number&quot;:&quot;+123...&quot;}])"
+                        class="dialer-input" style="height: 150px; font-family: monospace;"></textarea>
                     <button class="call-btn" onclick="createCampaign()">Create Campaign</button>
                 </div>
                 <div id="campaign-status" class="call-status"></div>
@@ -135,22 +121,10 @@
         async function createCampaign() {
             const name = document.getElementById('campaign-name').value;
             const contactsStr = document.getElementById('campaign-contacts').value;
-            const systemPrompt = document.getElementById('system-prompt').value;
-            const voice = document.getElementById('voice-select').value;
             const status = document.getElementById('campaign-status');
 
             try {
-                let contactsInput = JSON.parse(contactsStr);
-                let contacts = [];
-
-                if (Array.isArray(contactsInput)) {
-                    // Handle array of strings or objects
-                    contacts = contactsInput.map(c => typeof c === 'string' ? c : c.phone_number).filter(Boolean);
-                }
-
-                if (contacts.length === 0) {
-                    throw new Error("No valid phone numbers found");
-                }
+                const contacts = JSON.parse(contactsStr);
 
                 status.textContent = 'Creating campaign...';
                 status.className = 'call-status loading';
@@ -161,11 +135,8 @@
                     body: JSON.stringify({
                         name,
                         contacts,
-                        agentConfig: {
-                            prompt: systemPrompt,
-                            voice: voice
-                        },
-                        from_number: '+1987654321' // Default or load from settings
+                        from_number: '+1987654321', // Default
+                        organization_id: '17170ec5-ac80-4dbf-a293-7825caa3ca70'
                     })
                 });
 

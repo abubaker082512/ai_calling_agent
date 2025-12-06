@@ -1,5 +1,5 @@
 import { DeepgramService, TranscriptResult } from './deepgramService';
-import { ConversationEngine } from './conversationEngine';
+import { ConversationEngine, ConversationContext } from './conversationEngine';
 import { ConversationStateManager } from './conversationState';
 import { TelnyxService } from './telnyx';
 import { SupabaseService } from './supabase';
@@ -12,7 +12,6 @@ export interface ConversationLoopConfig {
     purpose?: string;
     greeting?: string;
     onSpeak?: (text: string) => Promise<void>;
-    callType?: 'browser' | 'phone';
 }
 
 export class ConversationLoop extends EventEmitter {
@@ -26,7 +25,7 @@ export class ConversationLoop extends EventEmitter {
     private callControlId: string;
     private isActive: boolean = false;
     private isAISpeaking: boolean = false;
-    private callType: 'browser' | 'phone';
+    private interruptBuffer: string = '';
     private onSpeak?: (text: string) => Promise<void>;
 
     constructor(config: ConversationLoopConfig) {
@@ -35,7 +34,6 @@ export class ConversationLoop extends EventEmitter {
         this.callId = config.callId;
         this.callControlId = config.callControlId;
         this.onSpeak = config.onSpeak;
-        this.callType = config.callType || 'phone';
 
         // Initialize services
         this.deepgram = new DeepgramService();
@@ -47,6 +45,9 @@ export class ConversationLoop extends EventEmitter {
         this.setupEventHandlers();
     }
 
+    /**
+     * Set up event handlers for all services
+     */
     private setupEventHandlers(): void {
         // Deepgram events
         this.deepgram.on('transcript', async (result: TranscriptResult) => {
@@ -72,9 +73,12 @@ export class ConversationLoop extends EventEmitter {
         });
     }
 
+    /**
+     * Start the conversation loop
+     */
     async start(greeting?: string): Promise<void> {
         try {
-            console.log(`🚀 Starting conversation loop for call ${this.callId} (${this.callType})`);
+            console.log(`🚀 Starting conversation loop for call ${this.callId}`);
             this.isActive = true;
 
             // Create conversation session
@@ -85,7 +89,8 @@ export class ConversationLoop extends EventEmitter {
             });
 
             // Start Deepgram stream with appropriate encoding
-            if (this.callType === 'browser') {
+            // Browser calls use linear16 PCM, phone calls use mulaw
+            if (this.callId.startsWith('browser_')) {
                 console.log('🌐 Browser call detected - using linear16 PCM encoding');
                 await this.deepgram.startStream({
                     encoding: 'linear16',
@@ -113,6 +118,9 @@ export class ConversationLoop extends EventEmitter {
         }
     }
 
+    /**
+     * Handle incoming transcript from Deepgram
+     */
     private async handleTranscript(result: TranscriptResult): Promise<void> {
         if (!result.isFinal || !result.text.trim()) {
             return;
@@ -137,46 +145,28 @@ export class ConversationLoop extends EventEmitter {
             return;
         }
 
-        let fullResponse = '';
-        let sentenceBuffer = '';
-        this.isAISpeaking = true;
+        const aiResponse = await this.conversationEngine.generateResponse(context, userText);
 
-        try {
-            await this.conversationEngine.generateStreamingResponse(context, userText, (chunk: string) => {
-                fullResponse += chunk;
-                sentenceBuffer += chunk;
+        // Broadcast AI message to WebSocket clients
+        this.broadcastMessage('ai', aiResponse, 1.0);
 
-                if (sentenceBuffer.match(/[.!?]+["']?\s*$/)) {
-                    const sentence = sentenceBuffer.trim();
-                    if (sentence.length > 0) {
-                        console.log(`🗣️ Speaking sentence chunk: "${sentence}"`);
-                        this.speak(sentence).catch(err => console.error('Error speaking chunk:', err));
-                    }
-                    sentenceBuffer = '';
-                }
-            });
+        // Save AI response
+        await this.stateManager.addMessage(this.callId, 'assistant', aiResponse);
+        await this.supabase.saveTranscript(this.callId, 'ai', aiResponse, 1.0);
 
-            if (sentenceBuffer.trim().length > 0) {
-                const sentence = sentenceBuffer.trim();
-                console.log(`🗣️ Speaking final chunk: "${sentence}"`);
-                await this.speak(sentence);
-            }
-
-        } catch (error) {
-            console.error('Error in streaming response:', error);
-            this.isAISpeaking = false;
-        }
-
-        this.broadcastMessage('ai', fullResponse, 1.0);
-
-        await this.stateManager.addMessage(this.callId, 'assistant', fullResponse);
-        await this.supabase.saveTranscript(this.callId, 'ai', fullResponse, 1.0);
+        // Speak AI response
+        await this.speak(aiResponse);
     }
 
+    /**
+     * Broadcast message to WebSocket clients
+     */
     private broadcastMessage(speaker: 'human' | 'ai', text: string, confidence: number): void {
         try {
+            // Dynamically import to avoid circular dependency
             import('../index').then(module => {
-                if (this.callType === 'browser') {
+                // Check if this is a browser call
+                if (this.callId.startsWith('browser_')) {
                     if (module.broadcastToBrowserCall) {
                         module.broadcastToBrowserCall(this.callId, {
                             type: 'transcript',
@@ -189,6 +179,7 @@ export class ConversationLoop extends EventEmitter {
                         });
                     }
                 } else {
+                    // Regular phone call
                     if (module.broadcastToLiveCall) {
                         module.broadcastToLiveCall(this.callId, {
                             type: 'transcript',
@@ -207,14 +198,21 @@ export class ConversationLoop extends EventEmitter {
         }
     }
 
+    /**
+     * Handle speech start (for interrupt detection)
+     */
     private handleSpeechStart(): void {
         if (this.isAISpeaking) {
             console.log('🛑 User interrupted AI - stopping playback');
+            // TODO: Implement stop playback when Telnyx supports it
             this.isAISpeaking = false;
             this.emit('interrupted');
         }
     }
 
+    /**
+     * Speak text using Telnyx TTS or custom handler
+     */
     private async speak(text: string): Promise<void> {
         try {
             this.isAISpeaking = true;
@@ -226,8 +224,9 @@ export class ConversationLoop extends EventEmitter {
                 await this.telnyx.speak(this.callControlId, text);
             }
 
-            // Simple delay to prevent overlap if we don't have exact timing
-            await new Promise(resolve => setTimeout(resolve, text.length * 50));
+            // Wait a bit for speech to complete
+            // In production, listen for call.speak.ended webhook
+            await new Promise(resolve => setTimeout(resolve, text.length * 50)); // Rough estimate
 
             this.isAISpeaking = false;
             this.emit('speech_complete');
@@ -239,22 +238,72 @@ export class ConversationLoop extends EventEmitter {
         }
     }
 
+    /**
+     * Process incoming audio from call
+     */
     async processAudio(audioData: Buffer): Promise<void> {
         if (!this.isActive) {
             return;
         }
+
+        // Send audio to Deepgram for transcription
         this.deepgram.sendAudio(audioData);
     }
 
+    /**
+     * Stop the conversation loop
+     */
     async stop(): Promise<void> {
         try {
             console.log(`🛑 Stopping conversation loop for call ${this.callId}`);
             this.isActive = false;
+
+            // Close Deepgram connection
             await this.deepgram.close();
-            this.removeAllListeners();
+
+            // Get final conversation context
+            const context = await this.stateManager.endSession(this.callId);
+
+            // Save final conversation summary
+            if (context) {
+                await this.saveFinalSummary(context);
+            }
+
+            console.log('✅ Conversation loop stopped');
             this.emit('stopped');
+
         } catch (error) {
-            console.error('Error stopping conversation loop:', error);
+            console.error('❌ Error stopping conversation loop:', error);
+            this.emit('error', error);
         }
+    }
+
+    /**
+     * Save final conversation summary
+     */
+    private async saveFinalSummary(context: ConversationContext): Promise<void> {
+        try {
+            const summary = {
+                callId: this.callId,
+                messageCount: context.messages.length,
+                duration: Date.now() - context.metadata.startTime.getTime(),
+                lastMessage: context.messages[context.messages.length - 1]?.content || ''
+            };
+
+            console.log('📝 Conversation summary:', summary);
+
+            // TODO: Save summary to database
+            // await this.supabase.saveCallSummary(this.callId, summary);
+
+        } catch (error) {
+            console.error('❌ Error saving conversation summary:', error);
+        }
+    }
+
+    /**
+     * Check if conversation is active
+     */
+    isConversationActive(): boolean {
+        return this.isActive;
     }
 }

@@ -292,9 +292,6 @@ async function startBrowserCall() {
         hangupBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'border-red-500/50');
         hangupBtn.classList.add('bg-red-500', 'text-white', 'hover:bg-red-600');
 
-        // Enable Background Noise
-        toggleBackgroundNoise(true);
-
     } catch (error) {
         console.error('Error starting browser call:', error);
         showStatus('Error: ' + error.message, 'error');
@@ -318,13 +315,8 @@ function handleBrowserCallMessage(message) {
             break;
 
         case 'speak':
-            // Fallback for legacy text messages
+            // AI wants to speak - use browser TTS
             speakText(message.data.text);
-            break;
-
-        case 'audio_playback':
-            // Server-generated high-quality audio
-            playServerAudio(message.data.audio);
             break;
 
         case 'transcript':
@@ -338,81 +330,7 @@ function handleBrowserCallMessage(message) {
     }
 }
 
-// Play server-generated audio
-async function playServerAudio(base64Audio) {
-    try {
-        // Reuse or create AudioContext
-        const audioCtx = window.browserCallAudioContext || new (window.AudioContext || window.webkitAudioContext)();
-
-        // Convert base64 to buffer
-        const binaryString = window.atob(base64Audio);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-        }
-
-        // Decode and play
-        const audioBuffer = await audioCtx.decodeAudioData(bytes.buffer);
-        const source = audioCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(audioCtx.destination);
-        source.start(0);
-
-    } catch (e) {
-        console.error("Error playing server audio:", e);
-    }
-}
-
-// Background Noise Generator (Brown Noise for office ambience)
-let noiseContext = null;
-let noiseSource = null;
-
-function toggleBackgroundNoise(enable) {
-    if (enable) {
-        if (!noiseContext) {
-            noiseContext = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        // Create Brown Noise
-        const bufferSize = noiseContext.sampleRate * 2; // 2 seconds buffer
-        const buffer = noiseContext.createBuffer(1, bufferSize, noiseContext.sampleRate);
-        const data = buffer.getChannelData(0);
-        let lastOut = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            data[i] = (lastOut + (0.02 * white)) / 1.02;
-            lastOut = data[i];
-            data[i] *= 3.5; // (roughly) compensate for gain
-        }
-
-        noiseSource = noiseContext.createBufferSource();
-        noiseSource.buffer = buffer;
-        noiseSource.loop = true;
-
-        // Lowpass filter to make it softer
-        const filter = noiseContext.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 400;
-
-        const gainNode = noiseContext.createGain();
-        gainNode.gain.value = 0.05; // Very low volume
-
-        noiseSource.connect(filter);
-        filter.connect(gainNode);
-        gainNode.connect(noiseContext.destination);
-
-        noiseSource.start();
-        console.log("🔈 Background noise started");
-    } else {
-        if (noiseSource) {
-            noiseSource.stop();
-            noiseSource = null;
-            console.log("🔇 Background noise stopped");
-        }
-    }
-}
-
-// Speak text using browser TTS (Legacy fallback)
+// Speak text using browser TTS
 function speakText(text) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 1.0;
@@ -475,9 +393,6 @@ function stopBrowserCall() {
     hangupBtn.classList.remove('bg-red-500', 'text-white', 'hover:bg-red-600');
 
     updateCallStatus('ended');
-
-    // Disable Background Noise
-    toggleBackgroundNoise(false);
 }
 
 // Hang Up Call

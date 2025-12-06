@@ -1,22 +1,5 @@
 import { RedisService } from './redis';
-
-export interface Message {
-    role: 'user' | 'assistant';
-    content: string;
-    timestamp?: Date;
-}
-
-export interface ConversationContext {
-    callId: string;
-    messages: Message[];
-    systemPrompt: string;
-    metadata: {
-        startTime: Date;
-        callerPhone?: string;
-        callPurpose?: string;
-        [key: string]: any;
-    };
-}
+import { ConversationContext, Message } from './conversationEngine';
 
 export class ConversationStateManager {
     private redis: RedisService;
@@ -51,21 +34,26 @@ export class ConversationStateManager {
     /**
      * Get conversation context
      */
-    /**
-     * Get conversation context
-     */
     async getContext(callId: string): Promise<ConversationContext | null> {
-        // Try memory cache first if Redis is discouraged or unavailable
+        // Try memory cache first if Redis is unavailable
         if (this.useMemoryFallback) {
-            return this.memoryCache.get(callId) || null;
+            const cached = this.memoryCache.get(callId);
+            if (cached) {
+                return cached;
+            }
+            return null;
         }
 
         try {
             const data = await this.redis.get(`conversation:${callId}`);
 
             if (!data) {
-                // Not in Redis, check memory just in case
-                return this.memoryCache.get(callId) || null;
+                // Check memory fallback
+                const cached = this.memoryCache.get(callId);
+                if (cached) {
+                    return cached;
+                }
+                return null;
             }
 
             const context = JSON.parse(data);
@@ -80,9 +68,13 @@ export class ConversationStateManager {
 
             return context;
         } catch (error) {
-            console.warn(`⚠️ Redis error (switching to memory): ${error instanceof Error ? error.message : String(error)}`);
+            console.error(`❌ Error getting conversation context for ${callId}:`, error);
+
+            // Fallback to memory cache
+            console.log(`📝 Using memory fallback for ${callId}`);
             this.useMemoryFallback = true;
-            return this.memoryCache.get(callId) || null;
+            const cached = this.memoryCache.get(callId);
+            return cached || null;
         }
     }
 
@@ -102,7 +94,8 @@ export class ConversationStateManager {
                     this.TTL
                 );
             } catch (error) {
-                console.warn(`⚠️ Redis save failed (switching to memory): ${error instanceof Error ? error.message : String(error)}`);
+                console.error(`❌ Error saving conversation context for ${callId}:`, error);
+                console.log(`📝 Falling back to memory-only storage for ${callId}`);
                 this.useMemoryFallback = true;
             }
         }

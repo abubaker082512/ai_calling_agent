@@ -50,6 +50,19 @@ fastify.get('/', async (request, reply) => {
     reply.redirect('/dashboard/');
 });
 
+// API: Environment Check (for debugging)
+fastify.get('/api/env-check', async (request, reply) => {
+    return {
+        GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+        DEEPGRAM_API_KEY: !!process.env.DEEPGRAM_API_KEY,
+        TELNYX_API_KEY: !!process.env.TELNYX_API_KEY,
+        SUPABASE_URL: !!process.env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
+        REDIS_URL: !!process.env.REDIS_URL
+    };
+});
+
+
 // API: Get stats
 fastify.get('/api/stats', async (request, reply) => {
     return {

@@ -479,31 +479,18 @@ fastify.register(async (fastify) => {
 
         let conversationLoop: ConversationLoop | null = null;
 
-        // Custom speak handler that sends audio to browser
+        // Custom speak handler that sends text to browser
         const onSpeak = async (text: string) => {
             try {
-                console.log(`🗣️ Generating AI voice for browser: "${text}"`);
-                // Generate audio using Telnyx (high quality voice)
-                const audioBuffer = await telnyxService.generateVoice(text, 'en-US-Neural2-F');
-
-                if (connection.readyState === WebSocket.OPEN) {
-                    connection.send(JSON.stringify({
-                        type: 'audio_playback',
-                        data: {
-                            audio: audioBuffer.toString('base64'),
-                            text
-                        }
-                    }));
-                }
-            } catch (err) {
-                console.error('Error sending speak to browser (fallback to text):', err);
-                // Fallback to text-based TTS if generation fails
+                console.log(`🗣️ Sending AI response to browser: "${text}"`);
                 if (connection.readyState === WebSocket.OPEN) {
                     connection.send(JSON.stringify({
                         type: 'speak',
                         data: { text }
                     }));
                 }
+            } catch (err) {
+                console.error('Error sending speak to browser:', err);
             }
         };
 

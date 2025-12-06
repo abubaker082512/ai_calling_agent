@@ -11,6 +11,7 @@ export interface ConversationLoopConfig {
     callerPhone: string;
     purpose?: string;
     greeting?: string;
+    callType?: 'phone' | 'browser';
     onSpeak?: (text: string) => Promise<void>;
 }
 

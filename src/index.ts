@@ -50,19 +50,6 @@ fastify.get('/', async (request, reply) => {
     reply.redirect('/dashboard/');
 });
 
-// API: Environment Check (for debugging)
-fastify.get('/api/env-check', async (request, reply) => {
-    return {
-        GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
-        DEEPGRAM_API_KEY: !!process.env.DEEPGRAM_API_KEY,
-        TELNYX_API_KEY: !!process.env.TELNYX_API_KEY,
-        SUPABASE_URL: !!process.env.SUPABASE_URL,
-        SUPABASE_ANON_KEY: !!process.env.SUPABASE_ANON_KEY,
-        REDIS_URL: !!process.env.REDIS_URL
-    };
-});
-
-
 // API: Get stats
 fastify.get('/api/stats', async (request, reply) => {
     return {
@@ -492,18 +479,31 @@ fastify.register(async (fastify) => {
 
         let conversationLoop: ConversationLoop | null = null;
 
-        // Custom speak handler that sends text to browser
+        // Custom speak handler that sends audio to browser
         const onSpeak = async (text: string) => {
             try {
-                console.log(`🗣️ Sending AI response to browser: "${text}"`);
+                console.log(`🗣️ Generating AI voice for browser: "${text}"`);
+                // Generate audio using Telnyx (high quality voice)
+                const audioBuffer = await telnyxService.generateVoice(text, 'en-US-Neural2-F');
+
+                if (connection.readyState === WebSocket.OPEN) {
+                    connection.send(JSON.stringify({
+                        type: 'audio_playback',
+                        data: {
+                            audio: audioBuffer.toString('base64'),
+                            text
+                        }
+                    }));
+                }
+            } catch (err) {
+                console.error('Error sending speak to browser (fallback to text):', err);
+                // Fallback to text-based TTS if generation fails
                 if (connection.readyState === WebSocket.OPEN) {
                     connection.send(JSON.stringify({
                         type: 'speak',
                         data: { text }
                     }));
                 }
-            } catch (err) {
-                console.error('Error sending speak to browser:', err);
             }
         };
 

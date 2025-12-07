@@ -1,4 +1,4 @@
-import { TelnyxAIService, TranscriptResult } from './telnyxAI';
+import { DeepgramService, TranscriptResult } from './deepgramService';
 import { ConversationEngine, ConversationContext } from './conversationEngine';
 import { ConversationStateManager } from './conversationState';
 import { TelnyxService } from './telnyx';
@@ -16,7 +16,7 @@ export interface ConversationLoopConfig {
 }
 
 export class ConversationLoop extends EventEmitter {
-    private deepgram: TelnyxAIService;
+    private deepgram: DeepgramService;
     private conversationEngine: ConversationEngine;
     private stateManager: ConversationStateManager;
     private telnyx: TelnyxService;
@@ -37,7 +37,7 @@ export class ConversationLoop extends EventEmitter {
         this.onSpeak = config.onSpeak;
 
         // Initialize services
-        this.deepgram = new TelnyxAIService();
+        this.deepgram = new DeepgramService();
         this.conversationEngine = new ConversationEngine();
         this.stateManager = new ConversationStateManager();
         this.telnyx = new TelnyxService();

@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { WebSocket } from 'ws';
 import { TelnyxService } from './services/telnyx';
+import { handleTelnyxWebhook } from './webhooks/telnyxWebhooks';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 

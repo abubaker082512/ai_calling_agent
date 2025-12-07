@@ -62,6 +62,8 @@ let callStartTime = null;
 let callDurationInterval = null;
 let messageCount = 0;
 let lastResponseTime = null;
+let audioQueue = [];
+let isPlayingAudio = false;
 
 // DOM Elements
 const startCallBtn = document.getElementById('startCallBtn');
@@ -119,6 +121,7 @@ function populateVoices(provider) {
 async function startCall() {
     try {
         console.log('🎤 Starting browser call...');
+        console.log('🎭 Selected voice:', voiceSelect.value);
 
         // Get user media
         mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -140,18 +143,21 @@ async function startCall() {
             updateCallStatus('connected', 'Connected');
 
             // Send configuration
+            const config = {
+                voice: voiceSelect.value,
+                backgroundNoise: {
+                    type: backgroundNoise.value,
+                    level: parseInt(noiseLevel.value)
+                },
+                llmProvider: llmProvider.value,
+                temperature: parseFloat(temperature.value),
+                interruptionEnabled: document.getElementById('interruptionEnabled').checked
+            };
+
+            console.log('⚙️ Sending configuration:', config);
             ws.send(JSON.stringify({
                 type: 'config',
-                config: {
-                    voice: voiceSelect.value,
-                    backgroundNoise: {
-                        type: backgroundNoise.value,
-                        level: parseInt(noiseLevel.value)
-                    },
-                    llmProvider: llmProvider.value,
-                    temperature: parseFloat(temperature.value),
-                    interruptionEnabled: document.getElementById('interruptionEnabled').checked
-                }
+                config: config
             }));
 
             // Start audio processing
@@ -247,7 +253,7 @@ function handleWebSocketMessage(event) {
             case 'speak':
                 if (message.data && message.data.text) {
                     addMessage('ai', message.data.text);
-                    speakText(message.data.text);
+                    // Audio will be played via 'audio' message from Telnyx TTS
                     messageCount++;
                     updateMessageCount();
 
@@ -259,6 +265,13 @@ function handleWebSocketMessage(event) {
                 }
                 break;
 
+            case 'audio':
+                // Play TTS audio from backend (Telnyx TTS with selected voice)
+                if (message.data) {
+                    playAudio(message.data);
+                }
+                break;
+
             case 'error':
                 console.error('❌ Server error:', message.error);
                 addMessage('system', `Error: ${message.error}`);
@@ -266,6 +279,29 @@ function handleWebSocketMessage(event) {
         }
     } catch (error) {
         console.error('❌ Error handling message:', error);
+    }
+}
+
+// Play audio from base64 encoded data
+function playAudio(base64Data) {
+    try {
+        console.log('🔊 Playing audio from backend (Telnyx TTS)');
+        const audioData = atob(base64Data);
+        const audioArray = new Uint8Array(audioData.length);
+        for (let i = 0; i < audioData.length; i++) {
+            audioArray[i] = audioData.charCodeAt(i);
+        }
+        const audioBlob = new Blob([audioArray], { type: 'audio/mpeg' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+
+        audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+        };
+
+        audio.play().catch(err => console.error('Error playing audio:', err));
+    } catch (err) {
+        console.error('Error processing audio:', err);
     }
 }
 
@@ -299,17 +335,6 @@ function addMessage(role, text) {
     transcript.scrollTop = transcript.scrollHeight;
 
     lastResponseTime = Date.now();
-}
-
-// Speak text using browser TTS
-function speakText(text) {
-    if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.0;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-        window.speechSynthesis.speak(utterance);
-    }
 }
 
 // Preview voice
@@ -410,4 +435,4 @@ function cleanup() {
     latency.textContent = '-- ms';
 }
 
-console.log('✅ Live Test Enhanced UI loaded');
+console.log('✅ Live Test Enhanced UI loaded with Telnyx TTS support');

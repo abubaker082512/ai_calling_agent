@@ -139,12 +139,9 @@ export class ConversationLoop extends EventEmitter {
                 await this.deepgram.startStream();
             }
 
-            // Connect TTS only for phone calls (browser uses browser TTS)
-            if (this.callType !== 'browser') {
-                await this.tts.connect();
-            } else {
-                console.log('🌐 Browser call - using browser TTS');
-            }
+            // Connect TTS for all calls (including browser)
+            console.log(`🎤 Connecting Telnyx TTS with voice: ${this.voice || 'default'}`);
+            await this.tts.connect();
 
             // Play greeting
             const greetingText = greeting || "Hello! I'm an AI assistant. How can I help you today?";
@@ -277,20 +274,14 @@ export class ConversationLoop extends EventEmitter {
             this.isAISpeaking = true;
             console.log(`🗣️ AI speaking: "${text}"`);
 
-            // For browser calls, send text for browser TTS
-            if (this.callType === 'browser') {
-                if (this.onSpeak) {
-                    console.log(`🗣️ Sending AI response to browser for TTS: "${text}"`);
-                    await this.onSpeak(text);
-                }
-                this.isAISpeaking = false;
-                return;
-            }
-
-            // For phone calls, use Telnyx TTS
+            // Send text to browser/phone for display
             if (this.onSpeak) {
+                console.log(`🗣️ Sending AI response text: "${text}"`);
                 await this.onSpeak(text);
             }
+
+            // Use Telnyx TTS for audio synthesis (all call types)
+            console.log(`🎤 Synthesizing with Telnyx TTS (voice: ${this.voice})`);
             await this.tts.synthesize(text);
 
             // Note: isAISpeaking will be set to false by TTS 'done' event

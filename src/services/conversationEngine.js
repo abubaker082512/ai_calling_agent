@@ -1,39 +1,76 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const axios = require('axios');
 const EventEmitter = require('events');
 
 class ConversationEngine extends EventEmitter {
     constructor() {
         super();
-        const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY;
+        const apiKey = process.env.TELNYX_API_KEY;
         if (!apiKey) {
-            console.error(' GEMINI_API_KEY is missing');
-            throw new Error('GEMINI_API_KEY is required');
+            console.error('❌ TELNYX_API_KEY is missing');
+            throw new Error('TELNYX_API_KEY is required');
         }
-        this.genAI = new GoogleGenerativeAI(apiKey);
-        this.modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-        this.model = this.genAI.getGenerativeModel({ model: this.modelName });
-        console.log(` Gemini AI initialized with model: ${this.modelName}`);
+        this.apiKey = apiKey;
+        this.modelName = 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo';
+        this.baseURL = 'https://api.telnyx.com/v2/ai';
+        console.log(`🤖 Telnyx AI initialized with model: ${this.modelName}`);
     }
 
     async generateResponse(context, userMessage) {
         try {
-            console.log(` Generating AI response for: "${userMessage}"`);
-            const conversationHistory = context.messages.slice(-10).map(msg => {
-                const role = msg.role === 'assistant' ? 'Assistant' : 'User';
-                return `${role}: ${msg.content}`;
-            }).join('\n');
-            const fullPrompt = `${context.systemPrompt}\n\n${conversationHistory ? `Conversation so far:\n${conversationHistory}\n\n` : ''}User: ${userMessage}\n\nAssistant:`;
-            const result = await this.model.generateContent(fullPrompt);
-            const response = await result.response;
-            const text = response.text();
-            if (!text || text.trim().length === 0) {
-                throw new Error('Empty response from Gemini');
+            console.log(`🤖 Generating AI response for: "${userMessage}"`);
+
+            // Build messages array for Telnyx Inference API
+            const messages = [
+                { role: 'system', content: context.systemPrompt }
+            ];
+
+            // Add conversation history (last 10 messages)
+            const recentMessages = context.messages.slice(-10);
+            for (const msg of recentMessages) {
+                messages.push({
+                    role: msg.role,
+                    content: msg.content
+                });
             }
-            console.log(` AI response: "${text}"`);
-            this.emit('response', { text: text, tokens: 0 });
-            return text;
+
+            // Add current user message
+            messages.push({
+                role: 'user',
+                content: userMessage
+            });
+
+            // Call Telnyx Inference API
+            const response = await axios.post(
+                `${this.baseURL}/chat/completions`,
+                {
+                    model: this.modelName,
+                    messages: messages,
+                    temperature: 0.7,
+                    max_tokens: 500
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 30000 // 30 second timeout
+                }
+            );
+
+            const aiResponse = response.data.choices[0].message.content;
+            const tokens = response.data.usage?.total_tokens || 0;
+
+            if (!aiResponse || aiResponse.trim().length === 0) {
+                throw new Error('Empty response from Telnyx AI');
+            }
+
+            console.log(`✅ AI response: "${aiResponse}"`);
+            this.emit('response', { text: aiResponse, tokens: tokens });
+
+            return aiResponse;
+
         } catch (error) {
-            console.error(' Error generating AI response:', error);
+            console.error('❌ Error generating AI response:', error.response?.data || error.message);
             const fallbackResponse = "I apologize, I'm having trouble processing that. Could you please repeat?";
             this.emit('error', error);
             return fallbackResponse;
@@ -41,6 +78,8 @@ class ConversationEngine extends EventEmitter {
     }
 
     async generateStreamingResponse(context, userMessage, onChunk) {
+        // For now, return non-streaming response
+        // TODO: Implement streaming with Telnyx Inference API
         return this.generateResponse(context, userMessage);
     }
 
@@ -48,17 +87,13 @@ class ConversationEngine extends EventEmitter {
         return `You are a helpful AI assistant speaking with a customer over the phone.
 
 Guidelines:
-- Be concise and natural in your responses
-- Speak in short sentences (1-2 sentences at a time)
-- Use a friendly, professional tone
-- Ask clarifying questions when needed
-- If you don't know something, admit it honestly
-- Listen carefully and respond appropriately
-- Avoid long explanations unless specifically asked
+- Be concise and natural
+- Keep responses under 2-3 sentences when possible
+- Be friendly and professional
+- If you don't know something, say so
+- Speak in a conversational tone
 
-Purpose: ${purpose}
-
-Remember: You are having a voice conversation, so keep responses brief and conversational.`;
+Purpose: ${purpose}`;
     }
 }
 

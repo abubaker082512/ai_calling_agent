@@ -1,56 +1,54 @@
 // Voice options database
 const VOICES = {
     aws: [
-        { value: 'AWS.Polly.Joanna-Neural', label: 'Joanna (Female, US)' },
-        { value: 'AWS.Polly.Matthew-Neural', label: 'Matthew (Male, US)' },
-        { value: 'AWS.Polly.Ivy-Neural', label: 'Ivy (Female Child, US)' },
-        { value: 'AWS.Polly.Kevin-Neural', label: 'Kevin (Male Child, US)' },
-        { value: 'AWS.Polly.Kimberly-Neural', label: 'Kimberly (Female, US)' },
-        { value: 'AWS.Polly.Salli-Neural', label: 'Salli (Female, US)' },
-        { value: 'AWS.Polly.Joey-Neural', label: 'Joey (Male, US)' },
-        { value: 'AWS.Polly.Justin-Neural', label: 'Justin (Male Child, US)' },
-        { value: 'AWS.Polly.Amy-Neural', label: 'Amy (Female, British)' },
-        { value: 'AWS.Polly.Emma-Neural', label: 'Emma (Female, British)' },
-        { value: 'AWS.Polly.Brian-Neural', label: 'Brian (Male, British)' },
-        { value: 'AWS.Polly.Olivia-Neural', label: 'Olivia (Female, Australian)' }
+        { value: 'Joanna', label: 'Joanna (Female, US)' },
+        { value: 'Matthew', label: 'Matthew (Male, US)' },
+        { value: 'Ivy', label: 'Ivy (Female Child, US)' },
+        { value: 'Kevin', label: 'Kevin (Male Child, US)' },
+        { value: 'Kimberly', label: 'Kimberly (Female, US)' },
+        { value: 'Salli', label: 'Salli (Female, US)' },
+        { value: 'Joey', label: 'Joey (Male, US)' },
+        { value: 'Justin', label: 'Justin (Male Child, US)' },
+        { value: 'Amy', label: 'Amy (Female, British)' },
+        { value: 'Emma', label: 'Emma (Female, British)' },
+        { value: 'Brian', label: 'Brian (Male, British)' },
+        { value: 'Olivia', label: 'Olivia (Female, Australian)' }
     ],
     google: [
-        { value: 'Google.en-US-Neural2-A', label: 'Neural2-A (Male)' },
-        { value: 'Google.en-US-Neural2-C', label: 'Neural2-C (Female)' },
-        { value: 'Google.en-US-Neural2-D', label: 'Neural2-D (Male)' },
-        { value: 'Google.en-US-Neural2-E', label: 'Neural2-E (Female)' },
-        { value: 'Google.en-US-Neural2-F', label: 'Neural2-F (Female)' },
-        { value: 'Google.en-US-Neural2-G', label: 'Neural2-G (Female)' },
-        { value: 'Google.en-US-Neural2-H', label: 'Neural2-H (Female)' },
-        { value: 'Google.en-US-Neural2-I', label: 'Neural2-I (Male)' },
-        { value: 'Google.en-US-Neural2-J', label: 'Neural2-J (Male)' }
+        { value: 'en-US-Neural2-A', label: 'Neural2-A (Male)' },
+        { value: 'en-US-Neural2-C', label: 'Neural2-C (Female)' },
+        { value: 'en-US-Neural2-D', label: 'Neural2-D (Male)' },
+        { value: 'en-US-Neural2-E', label: 'Neural2-E (Female)' },
+        { value: 'en-US-Neural2-F', label: 'Neural2-F (Female)' },
+        { value: 'en-US-Neural2-G', label: 'Neural2-G (Female)' },
+        { value: 'en-US-Neural2-H', label: 'Neural2-H (Female)' },
+        { value: 'en-US-Neural2-I', label: 'Neural2-I (Male)' },
+        { value: 'en-US-Neural2-J', label: 'Neural2-J (Male)' }
     ],
     azure: [
-        { value: 'Azure.en-US-JennyNeural', label: 'Jenny (Female)' },
-        { value: 'Azure.en-US-GuyNeural', label: 'Guy (Male)' },
-        { value: 'Azure.en-US-AriaNeural', label: 'Aria (Female)' },
-        { value: 'Azure.en-US-DavisNeural', label: 'Davis (Male)' },
-        { value: 'Azure.en-US-AmberNeural', label: 'Amber (Female)' },
-        { value: 'Azure.en-US-AshleyNeural', label: 'Ashley (Female)' },
-        { value: 'Azure.en-US-BrandonNeural', label: 'Brandon (Male)' },
-        { value: 'Azure.en-US-ChristopherNeural', label: 'Christopher (Male)' }
+        { value: 'en-US-JennyNeural', label: 'Jenny (Female)' },
+        { value: 'en-US-GuyNeural', label: 'Guy (Male)' },
+        { value: 'en-US-AriaNeural', label: 'Aria (Female)' },
+        { value: 'en-US-DavisNeural', label: 'Davis (Male)' },
+        { value: 'en-US-AmberNeural', label: 'Amber (Female)' },
+        { value: 'en-US-AshleyNeural', label: 'Ashley (Female)' },
+        { value: 'en-US-BrandonNeural', label: 'Brandon (Male)' },
+        { value: 'en-US-ChristopherNeural', label: 'Christopher (Male)' }
     ],
     elevenlabs: [
-        { value: 'ElevenLabs.Rachel', label: 'Rachel (Conversational)' },
-        { value: 'ElevenLabs.Domi', label: 'Domi (Strong)' },
-        { value: 'ElevenLabs.Bella', label: 'Bella (Soft)' },
-        { value: 'ElevenLabs.Antoni', label: 'Antoni (Well-rounded)' },
-        { value: 'ElevenLabs.Elli', label: 'Elli (Emotional)' },
-        { value: 'ElevenLabs.Josh', label: 'Josh (Deep)' },
-        { value: 'ElevenLabs.Arnold', label: 'Arnold (Crisp)' },
-        { value: 'ElevenLabs.Adam', label: 'Adam (Deep)' },
-        { value: 'ElevenLabs.Sam', label: 'Sam (Raspy)' }
+        { value: 'Rachel', label: 'Rachel (Conversational)' },
+        { value: 'Domi', label: 'Domi (Strong)' },
+        { value: 'Bella', label: 'Bella (Soft)' },
+        { value: 'Antoni', label: 'Antoni (Well-rounded)' },
+        { value: 'Elli', label: 'Elli (Emotional)' },
+        { value: 'Josh', label: 'Josh (Deep)' },
+        { value: 'Arnold', label: 'Arnold (Crisp)' },
+        { value: 'Adam', label: 'Adam (Deep)' },
+        { value: 'Sam', label: 'Sam (Raspy)' }
     ],
     telnyx: [
-        { value: 'Telnyx.Natural.Male', label: 'Natural Male' },
-        { value: 'Telnyx.Natural.Female', label: 'Natural Female' },
-        { value: 'Telnyx.NaturalHD.Male', label: 'Natural HD Male' },
-        { value: 'Telnyx.NaturalHD.Female', label: 'Natural HD Female' }
+        { value: 'male', label: 'Natural Male' },
+        { value: 'female', label: 'Natural Female' }
     ]
 };
 
@@ -309,8 +307,8 @@ function playAudio(base64Data) {
 function addMessage(role, text) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message p-4 rounded-lg ${role === 'user' ? 'bg-blue-600/20 ml-8' :
-            role === 'ai' ? 'bg-purple-600/20 mr-8' :
-                'bg-gray-600/20 text-center'
+        role === 'ai' ? 'bg-purple-600/20 mr-8' :
+            'bg-gray-600/20 text-center'
         }`;
 
     const icon = role === 'user' ? '👤' : role === 'ai' ? '🤖' : 'ℹ️';
@@ -380,9 +378,9 @@ async function previewVoice() {
 function updateCallStatus(status, text) {
     callStatus.textContent = text;
     callStatus.className = `px-4 py-2 rounded-full text-sm ${status === 'connected' ? 'bg-yellow-600' :
-            status === 'active' ? 'bg-green-600 active-call' :
-                status === 'error' ? 'bg-red-600' :
-                    'bg-gray-700'
+        status === 'active' ? 'bg-green-600 active-call' :
+            status === 'error' ? 'bg-red-600' :
+                'bg-gray-700'
         }`;
 }
 

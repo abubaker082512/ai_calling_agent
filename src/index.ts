@@ -520,8 +520,23 @@ fastify.register(async (fastify) => {
                                 callControlId: callId, // Use callId as fake control ID
                                 callerPhone: 'browser',
                                 greeting: data.greeting,
+                                voice: data.voice || 'AWS.Polly.Joanna-Neural', // Allow voice selection
                                 onSpeak,
                                 callType: 'browser'
+                            });
+
+                            // Listen for TTS audio chunks
+                            conversationLoop.on('tts-audio', (audioChunk: Buffer) => {
+                                try {
+                                    if (connection.readyState === WebSocket.OPEN) {
+                                        connection.send(JSON.stringify({
+                                            type: 'audio',
+                                            data: audioChunk.toString('base64')
+                                        }));
+                                    }
+                                } catch (err) {
+                                    console.error('Error sending TTS audio:', err);
+                                }
                             });
 
                             browserCallLoops.set(callId, conversationLoop);

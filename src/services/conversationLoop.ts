@@ -2,6 +2,7 @@ import { DeepgramService, TranscriptResult } from './deepgramService';
 import { ConversationEngine, ConversationContext } from './conversationEngine';
 import { ConversationStateManager } from './conversationState';
 import { TelnyxService } from './telnyx';
+import { TelnyxTTSService } from './telnyxTTS';
 import { SupabaseService } from './supabase';
 import EventEmitter from 'events';
 
@@ -12,6 +13,7 @@ export interface ConversationLoopConfig {
     purpose?: string;
     greeting?: string;
     callType?: 'phone' | 'browser';
+    voice?: string; // TTS voice selection (e.g., 'AWS.Polly.Joanna-Neural')
     onSpeak?: (text: string) => Promise<void>;
 }
 
@@ -20,11 +22,13 @@ export class ConversationLoop extends EventEmitter {
     private conversationEngine: ConversationEngine;
     private stateManager: ConversationStateManager;
     private telnyx: TelnyxService;
+    private tts: TelnyxTTSService;
     private supabase: SupabaseService;
 
     private callId: string;
     private callControlId: string;
     private callType: 'phone' | 'browser';
+    private voice: string;
     private isActive: boolean = false;
     private isAISpeaking: boolean = false;
     private interruptBuffer: string = '';
@@ -36,6 +40,7 @@ export class ConversationLoop extends EventEmitter {
         this.callId = config.callId;
         this.callControlId = config.callControlId;
         this.callType = config.callType || 'phone';
+        this.voice = config.voice || 'AWS.Polly.Joanna-Neural';
         this.onSpeak = config.onSpeak;
 
         // Initialize services
@@ -44,6 +49,15 @@ export class ConversationLoop extends EventEmitter {
         this.stateManager = new ConversationStateManager();
         this.telnyx = new TelnyxService();
         this.supabase = new SupabaseService();
+
+        // Initialize TTS with selected voice
+        this.tts = new TelnyxTTSService(process.env.TELNYX_API_KEY!, {
+            voice: this.voice,
+            encoding: 'mp3',
+            sampleRate: 24000
+        });
+
+        console.log(`🎙️ TTS initialized with voice: ${this.voice}`);
 
         this.setupEventHandlers();
     }
@@ -74,6 +88,27 @@ export class ConversationLoop extends EventEmitter {
         this.conversationEngine.on('error', (error) => {
             console.error('❌ Conversation engine error:', error);
         });
+
+        // TTS events
+        this.tts.on('audio', (audioChunk: Buffer) => {
+            // Emit audio for browser calls or send to phone
+            if (this.callType === 'browser') {
+                this.emit('tts-audio', audioChunk);
+            } else {
+                // For phone calls, send audio to Telnyx
+                // TODO: Implement phone audio streaming
+            }
+        });
+
+        this.tts.on('done', () => {
+            console.log('✅ TTS synthesis complete');
+            this.isAISpeaking = false;
+        });
+
+        this.tts.on('error', (error) => {
+            console.error('❌ TTS error:', error);
+            this.isAISpeaking = false;
+        });
     }
 
     /**
@@ -103,6 +138,9 @@ export class ConversationLoop extends EventEmitter {
                 console.log('📞 Phone call detected - using mulaw encoding');
                 await this.deepgram.startStream();
             }
+
+            // Connect TTS
+            await this.tts.connect();
 
             // Play greeting
             const greetingText = greeting || "Hello! I'm an AI assistant. How can I help you today?";
@@ -214,25 +252,23 @@ export class ConversationLoop extends EventEmitter {
     }
 
     /**
-     * Speak text using Telnyx TTS or custom handler
+     * Speak text using Telnyx TTS
      */
     private async speak(text: string): Promise<void> {
         try {
             this.isAISpeaking = true;
             console.log(`🗣️ AI speaking: "${text}"`);
 
+            // For browser calls, send text for display
             if (this.onSpeak) {
+                console.log(`🗣️ Sending AI response to browser: "${text}"`);
                 await this.onSpeak(text);
-            } else {
-                await this.telnyx.speak(this.callControlId, text);
             }
 
-            // Wait a bit for speech to complete
-            // In production, listen for call.speak.ended webhook
-            await new Promise(resolve => setTimeout(resolve, text.length * 50)); // Rough estimate
+            // Use Telnyx TTS for audio synthesis
+            await this.tts.synthesize(text);
 
-            this.isAISpeaking = false;
-            this.emit('speech_complete');
+            // Note: isAISpeaking will be set to false by TTS 'done' event
 
         } catch (error) {
             console.error('❌ Error speaking:', error);

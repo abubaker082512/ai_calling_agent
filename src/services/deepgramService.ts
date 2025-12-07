@@ -44,7 +44,8 @@ export class DeepgramService extends EventEmitter {
                 smart_format: true,
                 punctuate: true,
                 interim_results: true,
-                endpointing: 300, // ms of silence before finalizing
+                endpointing: 1000, // ms of silence before finalizing (increased from 300)
+                utterance_end_ms: 1500, // End utterance after 1.5s of silence
                 vad_events: true, // Voice Activity Detection
                 encoding: encoding as any,
                 sample_rate: sampleRate,
@@ -85,6 +86,22 @@ export class DeepgramService extends EventEmitter {
             this.liveTranscription.on(LiveTranscriptionEvents.SpeechStarted, () => {
                 console.log('🎤 Speech started');
                 this.emit('speech_start');
+            });
+
+            // Handle utterance end (forces finalization)
+            this.liveTranscription.on(LiveTranscriptionEvents.UtteranceEnd, (data: any) => {
+                console.log('🎤 Utterance ended - forcing finalization');
+                const transcript = data.channel?.alternatives?.[0];
+                if (transcript && transcript.transcript) {
+                    const result: TranscriptResult = {
+                        text: transcript.transcript,
+                        isFinal: true,
+                        confidence: transcript.confidence || 0,
+                        speaker: 'human'
+                    };
+                    console.log(`📝 Final transcript (from utterance end): "${result.text}"`);
+                    this.emit('transcript', result);
+                }
             });
 
             // Handle metadata

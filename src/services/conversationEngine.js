@@ -10,7 +10,7 @@ class ConversationEngine extends EventEmitter {
             throw new Error('TELNYX_API_KEY is required');
         }
         this.apiKey = apiKey;
-        this.modelName = 'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo';
+        this.modelName = 'Meta-Llama-3.1-70B-Instruct';
         this.baseURL = 'https://api.telnyx.com/v2/ai';
         console.log(`🤖 Telnyx AI initialized with model: ${this.modelName}`);
     }

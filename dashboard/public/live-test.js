@@ -378,8 +378,19 @@ function handleBrowserCallMessage(message) {
             break;
 
         case 'speak':
-            // AI wants to speak - use browser TTS
-            speakText(message.data.text);
+            // Display AI text (audio will come separately)
+            if (message.data && message.data.text) {
+                addMessage('ai', message.data.text);
+            }
+            break;
+
+        case 'audio':
+            // Play TTS audio chunk
+            if (message.data) {
+                console.log('🎵 Received audio chunk');
+                audioQueue.push(message.data);
+                processAudioQueue();
+            }
             break;
 
         case 'transcript':

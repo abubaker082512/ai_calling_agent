@@ -24,6 +24,7 @@ export class ConversationLoop extends EventEmitter {
 
     private callId: string;
     private callControlId: string;
+    private callType: 'phone' | 'browser';
     private isActive: boolean = false;
     private isAISpeaking: boolean = false;
     private interruptBuffer: string = '';
@@ -34,6 +35,7 @@ export class ConversationLoop extends EventEmitter {
 
         this.callId = config.callId;
         this.callControlId = config.callControlId;
+        this.callType = config.callType || 'phone';
         this.onSpeak = config.onSpeak;
 
         // Initialize services
@@ -91,7 +93,7 @@ export class ConversationLoop extends EventEmitter {
 
             // Start Deepgram stream with appropriate encoding
             // Browser calls use linear16 PCM, phone calls use mulaw
-            if (this.callId.startsWith('browser_')) {
+            if (this.callType === 'browser') {
                 console.log('🌐 Browser call detected - using linear16 PCM encoding');
                 await this.deepgram.startStream({
                     encoding: 'linear16',

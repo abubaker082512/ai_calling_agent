@@ -180,13 +180,27 @@ export class ConversationLoop extends EventEmitter {
         await this.supabase.saveTranscript(this.callId, 'human', userText, result.confidence);
 
         // Generate AI response
-        const context = await this.stateManager.getContext(this.callId);
+        let context = await this.stateManager.getContext(this.callId);
         if (!context) {
-            console.error('❌ No conversation context found');
-            return;
+            console.error('❌ No conversation context found, creating minimal context');
+            // Create minimal context as fallback
+            context = {
+                callId: this.callId,
+                systemPrompt: 'You are a helpful AI assistant speaking with a customer over the phone. Be concise and natural.',
+                messages: [
+                    { role: 'user', content: userText, timestamp: new Date() }
+                ],
+                metadata: {
+                    callerPhone: this.callControlId,
+                    callPurpose: 'support',
+                    startTime: new Date()
+                }
+            };
         }
 
+        console.log(`🤖 Generating AI response for: "${userText}"`);
         const aiResponse = await this.conversationEngine.generateResponse(context, userText);
+        console.log(`✅ AI response generated: "${aiResponse}"`);
 
         // Broadcast AI message to WebSocket clients
         this.broadcastMessage('ai', aiResponse, 1.0);

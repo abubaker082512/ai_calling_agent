@@ -14,6 +14,64 @@ let mediaRecorder = null;
 let audioStream = null;
 let speechSynthesis = window.speechSynthesis;
 
+// Audio playback setup
+let audioContext = null;
+let audioQueue = [];
+let isPlayingAudio = false;
+
+// Initialize Web Audio API
+function initAudioContext() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        console.log('🔊 Audio context initialized');
+    }
+    return audioContext;
+}
+
+// Play MP3 audio chunk
+async function playAudioChunk(base64Audio) {
+    try {
+        const ctx = initAudioContext();
+
+        // Decode base64 to array buffer
+        const binaryString = atob(base64Audio);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Decode audio data
+        const audioBuffer = await ctx.decodeAudioData(bytes.buffer);
+
+        // Create source and play
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        source.start(0);
+
+        console.log('🔊 Playing audio chunk');
+
+        // Wait for audio to finish
+        return new Promise(resolve => {
+            source.onended = resolve;
+        });
+    } catch (err) {
+        console.error('Error playing audio:', err);
+    }
+}
+
+// Process audio queue
+async function processAudioQueue() {
+    if (isPlayingAudio || audioQueue.length === 0) return;
+
+    isPlayingAudio = true;
+    while (audioQueue.length > 0) {
+        const audioChunk = audioQueue.shift();
+        await playAudioChunk(audioChunk);
+    }
+    isPlayingAudio = false;
+}
+
 // DOM Elements
 const startCallBtn = document.getElementById('startCallBtn');
 const hangupBtn = document.getElementById('hangupBtn');
@@ -226,10 +284,15 @@ async function startBrowserCall() {
         ws.onopen = () => {
             console.log('Browser call WebSocket connected');
 
-            // Send start message
+            // Get selected voice
+            const voiceSelect = document.getElementById('voiceSelect');
+            const selectedVoice = voiceSelect ? voiceSelect.value : 'AWS.Polly.Joanna-Neural';
+
+            // Send start message with voice selection
             const startMessage = {
                 type: 'start',
-                greeting: "Hello! I'm an AI assistant. How can I help you today?"
+                greeting: "Hello! I'm an AI assistant. How can I help you today?",
+                voice: selectedVoice
             };
             console.log('Sending start message:', startMessage);
             ws.send(JSON.stringify(startMessage));

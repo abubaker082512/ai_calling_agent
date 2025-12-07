@@ -165,13 +165,32 @@
 
                 <!-- Voice Selection -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-400 mb-2">Voice</label>
+                    <label class="block text-sm font-medium text-gray-400 mb-2">Voice (Telnyx TTS)</label>
                     <select id="voiceSelect"
                         class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500">
-                        <option value="en-US-Neural2-A">Neural2 A (Male)</option>
-                        <option value="en-US-Neural2-C">Neural2 C (Female)</option>
-                        <option value="en-US-Neural2-D">Neural2 D (Male)</option>
+                        <optgroup label="🎤 AWS Polly (Recommended)">
+                            <option value="AWS.Polly.Joanna-Neural" selected>Joanna - Female, US English</option>
+                            <option value="AWS.Polly.Matthew-Neural">Matthew - Male, US English</option>
+                            <option value="AWS.Polly.Amy-Neural">Amy - Female, British English</option>
+                            <option value="AWS.Polly.Brian-Neural">Brian - Male, British English</option>
+                            <option value="AWS.Polly.Nicole-Neural">Nicole - Female, Australian English</option>
+                            <option value="AWS.Polly.Russell-Neural">Russell - Male, Australian English</option>
+                        </optgroup>
+                        <optgroup label="🎙️ Azure Speech (High Quality)">
+                            <option value="Azure.en-US-AvaMultilingualNeural">Ava - Female, US English</option>
+                            <option value="Azure.en-US-AndrewMultilingualNeural">Andrew - Male, US English</option>
+                            <option value="Azure.en-GB-SoniaNeural">Sonia - Female, British English</option>
+                            <option value="Azure.en-GB-RyanNeural">Ryan - Male, British English</option>
+                            <option value="Azure.en-AU-NatashaNeural">Natasha - Female, Australian English</option>
+                        </optgroup>
+                        <optgroup label="⭐ ElevenLabs (Premium)">
+                            <option value="ElevenLabs.eleven_multilingual_v2.Rachel">Rachel - Female, Natural</option>
+                            <option value="ElevenLabs.eleven_multilingual_v2.Adam">Adam - Male, Deep</option>
+                            <option value="ElevenLabs.eleven_multilingual_v2.Bella">Bella - Female, Soft</option>
+                        </optgroup>
                     </select>
+                    <p class="text-xs text-gray-500 mt-2">💡 AWS Polly offers best value. ElevenLabs for premium
+                        quality.</p>
                 </div>
 
                 <!-- Model Selection -->

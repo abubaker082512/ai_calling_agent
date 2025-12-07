@@ -512,7 +512,63 @@ fastify.register(async (fastify) => {
                         return;
                     }
 
-                    if (data.type === 'start') {
+                    // Handle different message types
+                    if (data.type === 'config') {
+                        // Enhanced UI sends config first
+                        console.log(`⚙️ Received configuration:`, data.config);
+
+                        // Start conversation loop with enhanced config
+                        conversationLoop = new ConversationLoop({
+                            callId,
+                            callControlId: callId,
+                            callerPhone: 'browser',
+                            greeting: "Hello! I'm an AI assistant. How can I help you today?",
+                            voice: data.config?.voice || 'AWS.Polly.Joanna-Neural',
+                            onSpeak,
+                            callType: 'browser'
+                        });
+
+                        // Listen for TTS audio chunks
+                        conversationLoop.on('tts-audio', (audioChunk: Buffer) => {
+                            try {
+                                if (connection.readyState === WebSocket.OPEN) {
+                                    connection.send(JSON.stringify({
+                                        type: 'audio',
+                                        data: audioChunk.toString('base64')
+                                    }));
+                                }
+                            } catch (err) {
+                                console.error('Error sending TTS audio:', err);
+                            }
+                        });
+
+                        // Listen for transcript events
+                        conversationLoop.on('transcript', (text: string, isFinal: boolean) => {
+                            try {
+                                if (connection.readyState === WebSocket.OPEN) {
+                                    connection.send(JSON.stringify({
+                                        type: 'transcript',
+                                        data: { text, isFinal }
+                                    }));
+                                }
+                            } catch (err) {
+                                console.error('Error sending transcript:', err);
+                            }
+                        });
+
+                        browserCallLoops.set(callId, conversationLoop);
+
+                        console.log('📞 ConversationLoop created, starting...');
+                        await conversationLoop.start();
+                        console.log('✅ ConversationLoop started successfully');
+
+                        connection.send(JSON.stringify({
+                            type: 'started',
+                            callId
+                        }));
+
+                    } else if (data.type === 'start') {
+
                         console.log(`🚀 Starting browser call conversation for ${callId}`);
                         try {
                             // Start conversation loop

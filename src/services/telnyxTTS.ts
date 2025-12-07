@@ -25,10 +25,8 @@ export class TelnyxTTSService extends EventEmitter {
     }
 
     async connect(): Promise<void> {
-        const wsUrl = `wss://tts.telnyx.com/v2/stream?` +
-            `voice=${encodeURIComponent(this.config.voice!)}` +
-            `&sample_rate=${this.config.sampleRate}` +
-            `&encoding=${this.config.encoding}`;
+        // Correct Telnyx TTS WebSocket endpoint
+        const wsUrl = `wss://api.telnyx.com/v2/text-to-speech/speech?voice=${encodeURIComponent(this.config.voice!)}`;
 
         this.ws = new WebSocket(wsUrl, {
             headers: {

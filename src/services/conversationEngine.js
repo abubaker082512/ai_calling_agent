@@ -10,7 +10,8 @@ class ConversationEngine extends EventEmitter {
             throw new Error('TELNYX_API_KEY is required');
         }
         this.apiKey = apiKey;
-        this.modelName = 'Meta-Llama-3.1-70B-Instruct';
+        // Using GPT-4 as Telnyx Llama models are returning 404
+        this.modelName = 'gpt-4';
         this.baseURL = 'https://api.telnyx.com/v2/ai';
         console.log(`🤖 Telnyx AI initialized with model: ${this.modelName}`);
     }

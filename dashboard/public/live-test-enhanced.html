@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telnyx AI Calling Agent - Live Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .voice-card {
+            transition: all 0.3s ease;
+        }
+
+        .voice-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .active-call {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .waveform {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 40px;
+        }
+
+        .waveform-bar {
+            width: 3px;
+            background: linear-gradient(to top, #3b82f6, #60a5fa);
+            animation: wave 1s ease-in-out infinite;
+        }
+
+        @keyframes wave {
+
+            0%,
+            100% {
+                height: 10px;
+            }
+
+            50% {
+                height: 30px;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen text-white">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1
+                class="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                🎙️ Telnyx AI Calling Agent
+            </h1>
+            <p class="text-gray-400">Browser Testing Mode - No Phone Number Required</p>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Panel: Call Controls -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Call Status Card -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold">📞 Call Status</h2>
+                        <div id="callStatus" class="px-4 py-2 rounded-full bg-gray-700 text-sm">
+                            Disconnected
+                        </div>
+                    </div>
+
+                    <!-- Call Button -->
+                    <button id="startCallBtn"
+                        class="w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg">
+                        🎤 Start Browser Call
+                    </button>
+
+                    <button id="stopCallBtn"
+                        class="w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 shadow-lg hidden">
+                        📴 End Call
+                    </button>
+
+                    <!-- Audio Visualizer -->
+                    <div id="audioVisualizer" class="mt-6 hidden">
+                        <div class="flex items-center justify-center gap-1 waveform">
+                            <div class="waveform-bar" style="animation-delay: 0s"></div>
+                            <div class="waveform-bar" style="animation-delay: 0.1s"></div>
+                            <div class="waveform-bar" style="animation-delay: 0.2s"></div>
+                            <div class="waveform-bar" style="animation-delay: 0.3s"></div>
+                            <div class="waveform-bar" style="animation-delay: 0.4s"></div>
+                            <div class="waveform-bar" style="animation-delay: 0.5s"></div>
+                            <div class="waveform-bar" style="animation-delay: 0.6s"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversation Transcript -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                    <h2 class="text-2xl font-bold mb-4">💬 Conversation</h2>
+                    <div id="transcript" class="space-y-3 max-h-96 overflow-y-auto">
+                        <div class="text-gray-400 text-center py-8">
+                            Start a call to see the conversation...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Settings -->
+            <div class="space-y-6">
+                <!-- Voice Selection -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                    <h2 class="text-xl font-bold mb-4">🎭 Voice Selection</h2>
+
+                    <label class="block text-sm font-medium mb-2">Voice Provider</label>
+                    <select id="voiceProvider"
+                        class="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all mb-4">
+                        <option value="aws">AWS Polly Neural</option>
+                        <option value="google">Google Cloud</option>
+                        <option value="azure">Azure AI Speech</option>
+                        <option value="elevenlabs">ElevenLabs</option>
+                        <option value="telnyx">Telnyx Native</option>
+                    </select>
+
+                    <label class="block text-sm font-medium mb-2">Voice</label>
+                    <select id="voiceSelect"
+                        class="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all mb-4">
+                        <!-- Populated by JavaScript -->
+                    </select>
+
+                    <button id="previewVoiceBtn"
+                        class="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 transition-all font-medium">
+                        🔊 Preview Voice
+                    </button>
+                </div>
+
+                <!-- Background Noise -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                    <h2 class="text-xl font-bold mb-4">🔊 Background Noise</h2>
+
+                    <label class="block text-sm font-medium mb-2">Environment</label>
+                    <select id="backgroundNoise"
+                        class="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all mb-4">
+                        <option value="none">🔇 None (Silent)</option>
+                        <option value="office">🏢 Office</option>
+                        <option value="callcenter">📞 Call Center</option>
+                        <option value="coffeeshop">☕ Coffee Shop</option>
+                        <option value="outdoor">🌳 Outdoor</option>
+                        <option value="home">🏠 Home</option>
+                        <option value="car">🚗 Car</option>
+                    </select>
+
+                    <label class="block text-sm font-medium mb-2">
+                        Noise Level: <span id="noiseLevelValue">10%</span>
+                    </label>
+                    <input type="range" id="noiseLevel" min="0" max="100" value="10"
+                        class="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider">
+                </div>
+
+                <!-- AI Settings -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                    <h2 class="text-xl font-bold mb-4">🤖 AI Settings</h2>
+
+                    <label class="block text-sm font-medium mb-2">LLM Provider</label>
+                    <select id="llmProvider"
+                        class="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/20 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 outline-none transition-all mb-4">
+                        <option value="gemini">Google Gemini 2.5 Flash</option>
+                        <option value="telnyx-gpt4">Telnyx (GPT-4)</option>
+                        <option value="telnyx-llama">Telnyx (Llama 3.1)</option>
+                    </select>
+
+                    <label class="block text-sm font-medium mb-2">
+                        Response Speed: <span id="temperatureValue">0.7</span>
+                    </label>
+                    <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7"
+                        class="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider mb-4">
+
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-medium">Interruption Handling</label>
+                        <input type="checkbox" id="interruptionEnabled" checked
+                            class="w-5 h-5 rounded bg-white/5 border-white/20">
+                    </div>
+                </div>
+
+                <!-- Call Stats -->
+                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20">
+                    <h2 class="text-xl font-bold mb-4">📊 Call Stats</h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Duration:</span>
+                            <span id="callDuration" class="font-mono">00:00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Messages:</span>
+                            <span id="messageCount" class="font-mono">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-400">Latency:</span>
+                            <span id="latency" class="font-mono">-- ms</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="live-test-enhanced.js"></script>
+</body>
+
+</html>

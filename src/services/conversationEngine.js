@@ -11,7 +11,8 @@ class ConversationEngine extends EventEmitter {
         }
         this.apiKey = apiKey;
         this.genAI = new GoogleGenerativeAI(apiKey);
-        this.modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp' || 'gemini-2.5-flash';
+        // Using latest stable model from official Gemini docs
+        this.modelName = process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
         this.model = this.genAI.getGenerativeModel({ model: this.modelName });
         console.log(`🤖 Gemini AI initialized with model: ${this.modelName}`);
     }

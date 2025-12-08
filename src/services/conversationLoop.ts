@@ -4,6 +4,7 @@ import { ConversationStateManager } from './conversationState';
 import { TelnyxService } from './telnyx';
 import { TelnyxTTSService } from './telnyxTTS';
 import { SupabaseService } from './supabase';
+import { BackgroundNoiseMixer, BackgroundNoiseType } from './backgroundNoiseMixer';
 import EventEmitter from 'events';
 
 export interface ConversationLoopConfig {
@@ -14,6 +15,8 @@ export interface ConversationLoopConfig {
     greeting?: string;
     callType?: 'phone' | 'browser';
     voice?: string; // TTS voice selection (e.g., 'AWS.Polly.Joanna-Neural')
+    backgroundNoise?: BackgroundNoiseType; // Background noise environment
+    noiseLevel?: number; // Noise level 0-100
     onSpeak?: (text: string) => Promise<void>;
 }
 
@@ -24,6 +27,7 @@ export class ConversationLoop extends EventEmitter {
     private telnyx: TelnyxService;
     private tts: TelnyxTTSService;
     private supabase: SupabaseService;
+    private noiseMixer?: BackgroundNoiseMixer;
 
     private callId: string;
     private callControlId: string;
@@ -59,6 +63,15 @@ export class ConversationLoop extends EventEmitter {
 
         console.log(`🎙️ TTS initialized with voice: ${this.voice}`);
 
+        // Initialize background noise mixer if enabled
+        if (config.backgroundNoise && config.backgroundNoise !== 'none') {
+            this.noiseMixer = new BackgroundNoiseMixer({
+                type: config.backgroundNoise,
+                level: config.noiseLevel || 10
+            });
+            console.log(`🔊 Background noise enabled: ${config.backgroundNoise}`);
+        }
+
         this.setupEventHandlers();
     }
 
@@ -91,9 +104,15 @@ export class ConversationLoop extends EventEmitter {
 
         // TTS events
         this.tts.on('audio', (audioChunk: Buffer) => {
+            // Mix background noise if enabled
+            let finalAudio = audioChunk;
+            if (this.noiseMixer) {
+                finalAudio = this.noiseMixer.mixAudio(audioChunk);
+            }
+
             // Emit audio for browser calls or send to phone
             if (this.callType === 'browser') {
-                this.emit('tts-audio', audioChunk);
+                this.emit('tts-audio', finalAudio);
             } else {
                 // For phone calls, send audio to Telnyx
                 // TODO: Implement phone audio streaming
@@ -360,5 +379,26 @@ export class ConversationLoop extends EventEmitter {
      */
     isConversationActive(): boolean {
         return this.isActive;
+    }
+
+    /**
+     * Update background noise settings during call
+     */
+    updateNoiseSettings(type: BackgroundNoiseType, level: number): void {
+        if (!this.noiseMixer) {
+            // Create mixer if it doesn't exist
+            this.noiseMixer = new BackgroundNoiseMixer({ type, level });
+            console.log(`🔊 Background noise enabled: ${type} at ${level}%`);
+        } else {
+            // Update existing mixer
+            this.noiseMixer.updateConfig({ type, level });
+        }
+    }
+
+    /**
+     * Get current noise settings
+     */
+    getNoiseSettings() {
+        return this.noiseMixer?.getConfig() || { type: 'none' as BackgroundNoiseType, level: 0 };
     }
 }

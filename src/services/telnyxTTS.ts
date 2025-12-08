@@ -89,16 +89,28 @@ export class TelnyxTTSService extends EventEmitter {
 
         console.log(`🗣️ Synthesizing with ${this.config.voice}: "${text}"`);
 
+        // Clear previous audio queue
+        this.audioQueue = [];
+
         // Send text frame per official docs
         this.ws.send(JSON.stringify({
             text: text
         }));
 
-        // Emit done event after a short delay
+        // Send stop frame to signal end of text (per Telnyx docs)
         setTimeout(() => {
-            console.log('✅ TTS synthesis request sent');
-            this.emit('done');
-        }, 100);
+            if (this.ws && this.isConnected) {
+                this.ws.send(JSON.stringify({
+                    text: ""
+                }));
+                console.log('✅ TTS stop frame sent');
+
+                // Emit done after stop frame
+                setTimeout(() => {
+                    this.emit('done');
+                }, 100);
+            }
+        }, 50);
     }
 
     async stop(): Promise<void> {

@@ -74,15 +74,16 @@ fastify.post('/api/test/voice', async (request, reply) => {
             return reply.status(400).send({ error: 'Missing required field: text' });
         }
 
-        console.log(`🧪 Generating voice sample with Telnyx: ${voice}`);
+        console.log(`🧪 Generating voice sample with Telnyx TTS`);
+        console.log(`   Voice: ${voice}`);
+        console.log(`   Text: ${text}`);
 
-        // Use Telnyx Text-to-Speech API
+        // Use CORRECT Telnyx Text-to-Speech REST API endpoint
         const response = await axios.post(
-            'https://api.telnyx.com/v2/ai/generate/text_to_speech',
+            'https://api.telnyx.com/v2/text-to-speech/speech',
             {
                 text: text,
-                voice: voice || 'en-US-Neural2-A',
-                language: 'en-US'
+                voice: voice || 'AWS.Polly.Joanna-Neural'
             },
             {
                 headers: {
@@ -93,10 +94,13 @@ fastify.post('/api/test/voice', async (request, reply) => {
             }
         );
 
+        console.log(`✅ Voice preview generated successfully`);
         reply.header('Content-Type', 'audio/mpeg');
         return reply.send(Buffer.from(response.data));
     } catch (error: any) {
-        console.error('Error generating voice:', error.response?.data || error.message);
+        console.error('❌ Error generating voice:', error.response?.data || error.message);
+        console.error('   Status:', error.response?.status);
+        console.error('   Headers:', error.response?.headers);
         return reply.status(500).send({
             error: error.response?.data?.errors?.[0]?.detail || error.message
         });

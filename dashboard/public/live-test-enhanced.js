@@ -251,7 +251,9 @@ function handleWebSocketMessage(event) {
             case 'speak':
                 if (message.data && message.data.text) {
                     addMessage('ai', message.data.text);
-                    // Audio will be played via 'audio' message from Telnyx TTS
+
+                    // Use browser TTS as fallback (Telnyx TTS has connection issues)
+                    speakText(message.data.text);
                     messageCount++;
                     updateMessageCount();
 

@@ -273,6 +273,14 @@ function handleWebSocketMessage(event) {
                 }
                 break;
 
+            case 'audio':
+                // Play TTS audio from backend (Telnyx TTS with selected voice)
+                if (message.data) {
+                    console.log('🔊 Received audio chunk from Telnyx TTS');
+                    playAudio(message.data);
+                }
+                break;
+
             case 'error':
                 console.error('❌ Server error:', message.error);
                 addMessage('system', `Error: ${message.error}`);

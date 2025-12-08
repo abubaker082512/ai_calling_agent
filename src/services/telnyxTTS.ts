@@ -25,7 +25,7 @@ export class TelnyxTTSService extends EventEmitter {
     }
 
     async connect(): Promise<void> {
-        // Correct Telnyx TTS WebSocket endpoint
+        // Correct Telnyx TTS WebSocket endpoint per official docs
         const wsUrl = `wss://api.telnyx.com/v2/text-to-speech/speech?voice=${encodeURIComponent(this.config.voice!)}`;
 
         this.ws = new WebSocket(wsUrl, {
@@ -39,10 +39,9 @@ export class TelnyxTTSService extends EventEmitter {
                 console.log(`✅ Telnyx TTS connected with voice: ${this.config.voice}`);
                 this.isConnected = true;
 
-                // Send initialization frame (space character)
+                // Send initialization frame (single space) per official docs
                 this.ws!.send(JSON.stringify({
-                    type: 'text',
-                    data: ' '
+                    text: ' '
                 }));
 
                 resolve();
@@ -52,17 +51,14 @@ export class TelnyxTTSService extends EventEmitter {
                 try {
                     const message = JSON.parse(data.toString());
 
-                    if (message.type === 'audio') {
+                    if (message.audio) {
                         // Emit audio chunk (base64 encoded MP3)
-                        const audioBuffer = Buffer.from(message.data, 'base64');
+                        const audioBuffer = Buffer.from(message.audio, 'base64');
                         this.audioQueue.push(audioBuffer);
                         this.emit('audio', audioBuffer);
-                    } else if (message.type === 'done') {
-                        console.log('✅ TTS synthesis complete');
-                        this.emit('done');
-                    } else if (message.type === 'error') {
-                        console.error('❌ TTS error:', message.message);
-                        this.emit('error', new Error(message.message));
+                    } else if (message.error) {
+                        console.error('❌ TTS error:', message.error);
+                        this.emit('error', new Error(message.error));
                     }
                 } catch (err) {
                     console.error('Error parsing TTS message:', err);
@@ -90,9 +86,9 @@ export class TelnyxTTSService extends EventEmitter {
 
         console.log(`🗣️ Synthesizing with ${this.config.voice}: "${text}"`);
 
+        // Send text frame per official docs
         this.ws.send(JSON.stringify({
-            type: 'text',
-            data: text
+            text: text
         }));
     }
 

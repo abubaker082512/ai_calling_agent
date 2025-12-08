@@ -303,12 +303,24 @@ function playAudio(base64Data) {
     }
 }
 
+// Speak text using browser TTS (fallback when Telnyx TTS fails)
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        console.log('🗣️ Using browser TTS fallback');
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
 // Add message to transcript
 function addMessage(role, text) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message p-4 rounded-lg ${role === 'user' ? 'bg-blue-600/20 ml-8' :
-            role === 'ai' ? 'bg-purple-600/20 mr-8' :
-                'bg-gray-600/20 text-center'
+        role === 'ai' ? 'bg-purple-600/20 mr-8' :
+            'bg-gray-600/20 text-center'
         }`;
 
     const icon = role === 'user' ? '👤' : role === 'ai' ? '🤖' : 'ℹ️';
@@ -380,9 +392,9 @@ async function previewVoice() {
 function updateCallStatus(status, text) {
     callStatus.textContent = text;
     callStatus.className = `px-4 py-2 rounded-full text-sm ${status === 'connected' ? 'bg-yellow-600' :
-            status === 'active' ? 'bg-green-600 active-call' :
-                status === 'error' ? 'bg-red-600' :
-                    'bg-gray-700'
+        status === 'active' ? 'bg-green-600 active-call' :
+            status === 'error' ? 'bg-red-600' :
+                'bg-gray-700'
         }`;
 }
 

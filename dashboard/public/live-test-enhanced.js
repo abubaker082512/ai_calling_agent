@@ -307,7 +307,12 @@ function playAudio(base64Data) {
 }
 
 // Speak text using browser TTS (fallback when Telnyx TTS fails)
+// DISABLED - Using only Telnyx TTS
 function speakText(text) {
+    // Browser TTS disabled - using only Telnyx TTS
+    return;
+
+    /* DISABLED
     if ('speechSynthesis' in window) {
         console.log('🗣️ Using browser TTS fallback');
         const utterance = new SpeechSynthesisUtterance(text);
@@ -316,6 +321,7 @@ function speakText(text) {
         utterance.volume = 1.0;
         window.speechSynthesis.speak(utterance);
     }
+    */
 }
 
 // Add message to transcript

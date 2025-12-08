@@ -62,6 +62,8 @@ let messageCount = 0;
 let lastResponseTime = null;
 let audioQueue = [];
 let isPlayingAudio = false;
+let audioChunkBuffer = []; // Buffer to collect audio chunks
+let isCollectingAudio = false; // Flag to know when to collect chunks
 
 // DOM Elements
 const startCallBtn = document.getElementById('startCallBtn');
@@ -267,17 +269,18 @@ function handleWebSocketMessage(event) {
                 break;
 
             case 'audio':
-                // Play TTS audio from backend (Telnyx TTS with selected voice)
+                // Collect TTS audio chunks from backend
                 if (message.data) {
-                    playAudio(message.data);
-                }
-                break;
+                    console.log('🔊 Received audio chunk from Telnyx TTS, length:', message.data.length);
+                    audioChunkBuffer.push(message.data);
+                    isCollectingAudio = true;
 
-            case 'audio':
-                // Play TTS audio from backend (Telnyx TTS with selected voice)
-                if (message.data) {
-                    console.log('🔊 Received audio chunk from Telnyx TTS');
-                    playAudio(message.data);
+                    // Play after a short delay to collect more chunks
+                    setTimeout(() => {
+                        if (audioChunkBuffer.length > 0 && isCollectingAudio) {
+                            playBufferedAudio();
+                        }
+                    }, 500); // Wait 500ms to collect chunks
                 }
                 break;
 
@@ -393,6 +396,30 @@ function createWavFile(pcmData, sampleRate, numChannels, bitsPerSample) {
 function writeString(view, offset, string) {
     for (let i = 0; i < string.length; i++) {
         view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+
+// Play all buffered audio chunks as one
+function playBufferedAudio() {
+    if (audioChunkBuffer.length === 0) return;
+
+    isCollectingAudio = false;
+    console.log(`🎵 Playing ${audioChunkBuffer.length} buffered audio chunks`);
+
+    try {
+        // Concatenate all base64 chunks
+        const combinedBase64 = audioChunkBuffer.join('');
+        console.log('📊 Combined base64 length:', combinedBase64.length);
+
+        // Clear buffer
+        audioChunkBuffer = [];
+
+        // Play the combined audio
+        playAudio(combinedBase64);
+
+    } catch (err) {
+        console.error('❌ Error playing buffered audio:', err);
+        audioChunkBuffer = [];
     }
 }
 

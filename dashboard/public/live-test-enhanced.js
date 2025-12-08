@@ -309,17 +309,10 @@ function playAudio(base64Data) {
 
         console.log('🎵 Decoded audio data:', bytes.length, 'bytes');
 
-        // Telnyx sends raw PCM audio, convert to WAV format
-        const sampleRate = 24000; // Telnyx TTS sample rate
-        const numChannels = 1; // Mono
-        const bitsPerSample = 16; // 16-bit PCM
-
-        // Create WAV file with proper headers
-        const wavBuffer = createWavFile(bytes, sampleRate, numChannels, bitsPerSample);
-
-        // Create blob with WAV MIME type
-        const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' });
-        console.log('🎵 WAV blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
+        // Telnyx sends complete MP3 files (each chunk is a complete MP3 with headers)
+        // No conversion needed - just create blob and play
+        const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+        console.log('🎵 MP3 blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
 
         // Create object URL
         const audioUrl = URL.createObjectURL(audioBlob);

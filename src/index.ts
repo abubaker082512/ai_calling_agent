@@ -511,7 +511,10 @@ fastify.register(async (fastify) => {
                         // If not JSON, treat as audio data
                         if (conversationLoop) {
                             const audioBuffer = Buffer.isBuffer(message) ? message : Buffer.from(message);
+                            console.log(`🎤 Received audio from browser: ${audioBuffer.length} bytes`);
                             await conversationLoop.processAudio(audioBuffer);
+                        } else {
+                            console.log('⚠️ Received audio but conversationLoop not initialized');
                         }
                         return;
                     }

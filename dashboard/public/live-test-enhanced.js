@@ -295,22 +295,50 @@ function handleWebSocketMessage(event) {
 function playAudio(base64Data) {
     try {
         console.log('🔊 Playing audio from backend (Telnyx TTS)');
-        const audioData = atob(base64Data);
-        const audioArray = new Uint8Array(audioData.length);
-        for (let i = 0; i < audioData.length; i++) {
-            audioArray[i] = audioData.charCodeAt(i);
+        console.log('📊 Base64 data length:', base64Data.length);
+
+        // Decode base64 to binary
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
         }
-        const audioBlob = new Blob([audioArray], { type: 'audio/mpeg' });
+
+        // Create blob with correct MIME type for MP3
+        const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+        console.log('🎵 Audio blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
+
+        // Create object URL
         const audioUrl = URL.createObjectURL(audioBlob);
+
+        // Create and play audio element
         const audio = new Audio(audioUrl);
 
+        audio.onloadedmetadata = () => {
+            console.log('✅ Audio metadata loaded, duration:', audio.duration);
+        };
+
         audio.onended = () => {
+            console.log('✅ Audio playback finished');
             URL.revokeObjectURL(audioUrl);
         };
 
-        audio.play().catch(err => console.error('Error playing audio:', err));
+        audio.onerror = (e) => {
+            console.error('❌ Audio playback error:', e);
+            console.error('Audio error code:', audio.error?.code);
+            console.error('Audio error message:', audio.error?.message);
+            URL.revokeObjectURL(audioUrl);
+        };
+
+        audio.play().then(() => {
+            console.log('▶️ Audio playback started');
+        }).catch(err => {
+            console.error('❌ Error playing audio:', err);
+            URL.revokeObjectURL(audioUrl);
+        });
+
     } catch (err) {
-        console.error('Error processing audio:', err);
+        console.error('❌ Error processing audio:', err);
     }
 }
 

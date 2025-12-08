@@ -93,6 +93,12 @@ export class TelnyxTTSService extends EventEmitter {
         this.ws.send(JSON.stringify({
             text: text
         }));
+
+        // Emit done event after a short delay
+        setTimeout(() => {
+            console.log('✅ TTS synthesis request sent');
+            this.emit('done');
+        }, 100);
     }
 
     async stop(): Promise<void> {

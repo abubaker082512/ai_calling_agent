@@ -304,9 +304,19 @@ function playAudio(base64Data) {
             bytes[i] = binaryString.charCodeAt(i);
         }
 
-        // Create blob with correct MIME type for MP3
-        const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
-        console.log('🎵 Audio blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
+        console.log('🎵 Decoded audio data:', bytes.length, 'bytes');
+
+        // Telnyx sends raw PCM audio, convert to WAV format
+        const sampleRate = 24000; // Telnyx TTS sample rate
+        const numChannels = 1; // Mono
+        const bitsPerSample = 16; // 16-bit PCM
+
+        // Create WAV file with proper headers
+        const wavBuffer = createWavFile(bytes, sampleRate, numChannels, bitsPerSample);
+
+        // Create blob with WAV MIME type
+        const audioBlob = new Blob([wavBuffer], { type: 'audio/wav' });
+        console.log('🎵 WAV blob created:', audioBlob.size, 'bytes, type:', audioBlob.type);
 
         // Create object URL
         const audioUrl = URL.createObjectURL(audioBlob);
@@ -339,6 +349,50 @@ function playAudio(base64Data) {
 
     } catch (err) {
         console.error('❌ Error processing audio:', err);
+    }
+}
+
+// Create WAV file from raw PCM data
+function createWavFile(pcmData, sampleRate, numChannels, bitsPerSample) {
+    const bytesPerSample = bitsPerSample / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = pcmData.length;
+    const fileSize = 44 + dataSize;
+
+    const buffer = new ArrayBuffer(fileSize);
+    const view = new DataView(buffer);
+
+    // RIFF chunk descriptor
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, fileSize - 8, true);
+    writeString(view, 8, 'WAVE');
+
+    // fmt sub-chunk
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitsPerSample, true);
+
+    // data sub-chunk
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    // Write PCM data
+    const dataView = new Uint8Array(buffer, 44);
+    dataView.set(pcmData);
+
+    return buffer;
+}
+
+// Helper function to write string to DataView
+function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
     }
 }
 

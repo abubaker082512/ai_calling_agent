@@ -528,6 +528,8 @@ fastify.register(async (fastify) => {
                             callerPhone: 'browser',
                             greeting: "Hello! I'm an AI assistant. How can I help you today?",
                             voice: data.config?.voice || 'AWS.Polly.Joanna-Neural',
+                            backgroundNoise: data.config?.backgroundNoise?.type || 'none',
+                            noiseLevel: data.config?.backgroundNoise?.level || 10,
                             onSpeak,
                             callType: 'browser'
                         });
@@ -646,6 +648,18 @@ fastify.register(async (fastify) => {
                         await conversationLoop.stop();
                         browserCallLoops.delete(callId);
                         browserCallClients.delete(callId);
+
+                    } else if (data.type === 'update-noise' && conversationLoop) {
+                        // Update background noise settings dynamically
+                        console.log(`🔊 Updating noise settings:`, data.noise);
+                        conversationLoop.updateNoiseSettings(
+                            data.noise.type,
+                            data.noise.level
+                        );
+                        connection.send(JSON.stringify({
+                            type: 'noise-updated',
+                            noise: conversationLoop.getNoiseSettings()
+                        }));
                         conversationLoop = null;
                     }
                 }

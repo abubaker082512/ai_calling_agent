@@ -269,18 +269,10 @@ function handleWebSocketMessage(event) {
                 break;
 
             case 'audio':
-                // Collect TTS audio chunks from backend
+                // Play complete MP3 from server (server already concatenated chunks)
                 if (message.data) {
-                    console.log('🔊 Received audio chunk from Telnyx TTS, length:', message.data.length);
-                    audioChunkBuffer.push(message.data);
-                    isCollectingAudio = true;
-
-                    // Play after a short delay to collect more chunks
-                    setTimeout(() => {
-                        if (audioChunkBuffer.length > 0 && isCollectingAudio) {
-                            playBufferedAudio();
-                        }
-                    }, 500); // Wait 500ms to collect chunks
+                    console.log('🔊 Received complete MP3 from server, length:', message.data.length);
+                    playAudio(message.data);
                 }
                 break;
 

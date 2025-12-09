@@ -605,6 +605,23 @@ fastify.register(async (fastify) => {
                                 }
                             });
 
+                            // Listen for errors but DON'T close connection
+                            conversationLoop.on('error', (error) => {
+                                console.error('❌ ConversationLoop error:', error);
+                                // Send error to client but keep connection open
+                                if (connection.readyState === WebSocket.OPEN) {
+                                    connection.send(JSON.stringify({
+                                        type: 'error',
+                                        error: error instanceof Error ? error.message : 'Unknown error'
+                                    }));
+                                }
+                            });
+
+                            // Listen for stopped event but DON'T auto-close
+                            conversationLoop.on('stopped', () => {
+                                console.log('ℹ️ ConversationLoop stopped event received (not closing connection)');
+                            });
+
                             browserCallLoops.set(callId, conversationLoop);
 
                             console.log('📞 ConversationLoop created, starting...');

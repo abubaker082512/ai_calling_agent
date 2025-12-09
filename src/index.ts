@@ -694,7 +694,7 @@ fastify.register(async (fastify) => {
             }
         });
 
-        connection.on('error', (error) => {
+        connection.on('error', (error: Error) => {
             console.error(`❌ WebSocket error for call ${callId}:`, error);
         });
 

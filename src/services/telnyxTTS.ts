@@ -2,9 +2,9 @@ import WebSocket from 'ws';
 import { EventEmitter } from 'events';
 
 export interface TelnyxTTSConfig {
-    voice?: string; // Default: AWS.Polly.Joanna-Neural
-    sampleRate?: number; // Default: 24000
-    encoding?: 'mp3' | 'pcm'; // Default: mp3
+    voice?: string;
+    sampleRate?: number;
+    encoding?: 'mp3' | 'pcm';
 }
 
 export class TelnyxTTSService extends EventEmitter {
@@ -25,7 +25,6 @@ export class TelnyxTTSService extends EventEmitter {
     }
 
     async connect(): Promise<void> {
-        // Correct Telnyx TTS WebSocket endpoint per official docs
         const wsUrl = `wss://api.telnyx.com/v2/text-to-speech/speech?voice=${encodeURIComponent(this.config.voice!)}`;
 
         this.ws = new WebSocket(wsUrl, {
@@ -39,7 +38,7 @@ export class TelnyxTTSService extends EventEmitter {
                 console.log(`✅ Telnyx TTS connected with voice: ${this.config.voice}`);
                 this.isConnected = true;
 
-                // Send initialization frame (single space) per official docs
+                // Send initialization frame
                 this.ws!.send(JSON.stringify({
                     text: ' '
                 }));
@@ -91,12 +90,12 @@ export class TelnyxTTSService extends EventEmitter {
         // Clear previous audio queue
         this.audioQueue = [];
 
-        // Send text frame per official docs
+        // Send text frame
         this.ws.send(JSON.stringify({
             text: text
         }));
 
-        // Send stop frame to signal end of text (per Telnyx docs)
+        // Send stop frame to signal end of text
         setTimeout(() => {
             if (this.ws && this.isConnected) {
                 this.ws.send(JSON.stringify({
@@ -104,22 +103,30 @@ export class TelnyxTTSService extends EventEmitter {
                 }));
                 console.log('✅ TTS stop frame sent');
 
-                // Emit done after stop frame
+                // Wait for all chunks to arrive, then concatenate and emit
                 setTimeout(() => {
-                    this.emit('done');
-                }, 100);
+                    if (this.audioQueue.length > 0) {
+                        // Concatenate all chunks into one MP3 file
+                        const completeAudio = Buffer.concat(this.audioQueue);
+                        console.log(`🎵 Complete MP3 created: ${completeAudio.length} bytes from ${this.audioQueue.length} chunks`);
+
+                        // Emit the complete audio
+                        this.emit('audio', completeAudio);
+                        this.emit('done');
+
+                        // Clear queue
+                        this.audioQueue = [];
+                    } else {
+                        console.warn('⚠️ No audio chunks received');
+                        this.emit('done');
+                    }
+                }, 500); // Wait 500ms for all chunks to arrive
             }
         }, 50);
     }
 
     async stop(): Promise<void> {
         if (this.ws) {
-            // Send empty text to signal completion
-            this.ws.send(JSON.stringify({
-                type: 'text',
-                data: ''
-            }));
-
             this.ws.close();
             this.ws = null;
             this.isConnected = false;

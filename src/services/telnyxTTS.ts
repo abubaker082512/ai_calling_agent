@@ -75,14 +75,23 @@ export class TelnyxTTSService extends EventEmitter {
             this.ws!.on('close', () => {
                 console.log('🔌 Telnyx TTS disconnected');
                 this.isConnected = false;
-                this.emit('close');
+                // Don't emit close during conversation - only when explicitly stopped
+                // this.emit('close');
             });
         });
     }
 
     async synthesize(text: string): Promise<void> {
+        // Auto-reconnect if connection was lost
         if (!this.isConnected || !this.ws) {
-            throw new Error('TTS not connected');
+            console.warn('⚠️ TTS not connected, attempting to reconnect...');
+            try {
+                await this.connect();
+                console.log('✅ TTS reconnected successfully');
+            } catch (reconnectError) {
+                console.error('❌ Failed to reconnect TTS:', reconnectError);
+                throw new Error('TTS not connected');
+            }
         }
 
         console.log(`🗣️ Synthesizing with ${this.config.voice}: "${text}"`);
@@ -91,7 +100,7 @@ export class TelnyxTTSService extends EventEmitter {
         this.audioQueue = [];
 
         // Send text frame
-        this.ws.send(JSON.stringify({
+        this.ws!.send(JSON.stringify({
             text: text
         }));
 

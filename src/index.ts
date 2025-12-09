@@ -678,11 +678,24 @@ fastify.register(async (fastify) => {
 
         connection.on('close', async () => {
             console.log(`🌐 Browser call client disconnected: ${callId}`);
-            if (conversationLoop) {
-                await conversationLoop.stop();
+            try {
+                if (conversationLoop) {
+                    console.log('🛑 Stopping conversation loop...');
+                    await conversationLoop.stop();
+                    browserCallLoops.delete(callId);
+                    console.log('✅ Conversation loop stopped');
+                }
+                browserCallClients.delete(callId);
+            } catch (error) {
+                console.error('❌ Error during cleanup:', error);
+                // Force cleanup even if error
                 browserCallLoops.delete(callId);
+                browserCallClients.delete(callId);
             }
-            browserCallClients.delete(callId);
+        });
+
+        connection.on('error', (error) => {
+            console.error(`❌ WebSocket error for call ${callId}:`, error);
         });
 
         // Send initial connection confirmation

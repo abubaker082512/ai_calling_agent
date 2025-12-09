@@ -52,11 +52,10 @@ export class TelnyxTTSService extends EventEmitter {
                     const message = JSON.parse(data.toString());
 
                     if (message.audio) {
-                        // Emit audio chunk (base64 encoded MP3)
+                        // Buffer audio chunks (don't emit yet)
                         const audioBuffer = Buffer.from(message.audio, 'base64');
-                        console.log(`🎵 TTS audio chunk received: ${audioBuffer.length} bytes`);
+                        console.log(`🎵 TTS audio chunk buffered: ${audioBuffer.length} bytes`);
                         this.audioQueue.push(audioBuffer);
-                        this.emit('audio', audioBuffer);
                     } else if (message.error) {
                         console.error('❌ TTS error:', message.error);
                         this.emit('error', new Error(message.error));

@@ -332,22 +332,45 @@ export class ConversationLoop extends EventEmitter {
             console.log(`🛑 Stopping conversation loop for call ${this.callId}`);
             this.isActive = false;
 
-            // Close Deepgram connection
-            await this.deepgram.close();
+            // Close all connections
+            console.log('🔌 Closing Deepgram connection...');
+            await this.deepgram.close().catch(err => console.error('Error closing Deepgram:', err));
+
+            console.log('🔌 Closing TTS connection...');
+            await this.tts.stop().catch(err => console.error('Error closing TTS:', err));
 
             // Get final conversation context
-            const context = await this.stateManager.endSession(this.callId);
+            console.log('📝 Ending session...');
+            const context = await this.stateManager.endSession(this.callId).catch(err => {
+                console.error('Error ending session:', err);
+                return null;
+            });
 
             // Save final conversation summary
             if (context) {
                 await this.saveFinalSummary(context);
             }
 
+            // Remove all event listeners to prevent memory leaks
+            this.deepgram.removeAllListeners();
+            this.tts.removeAllListeners();
+            this.conversationEngine.removeAllListeners();
+
             console.log('✅ Conversation loop stopped');
             this.emit('stopped');
 
         } catch (error) {
             console.error('❌ Error stopping conversation loop:', error);
+            // Force cleanup even on error
+            try {
+                await this.deepgram.close().catch(() => { });
+                await this.tts.stop().catch(() => { });
+                this.deepgram.removeAllListeners();
+                this.tts.removeAllListeners();
+                this.conversationEngine.removeAllListeners();
+            } catch (cleanupError) {
+                console.error('❌ Error during force cleanup:', cleanupError);
+            }
             this.emit('error', error);
         }
     }

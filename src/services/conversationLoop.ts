@@ -104,14 +104,17 @@ export class ConversationLoop extends EventEmitter {
 
         // TTS events
         this.tts.on('audio', (audioChunk: Buffer) => {
+            console.log(`🎵 TTS audio received in ConversationLoop: ${audioChunk.length} bytes`);
             // Mix background noise if enabled
             let finalAudio = audioChunk;
             if (this.noiseMixer) {
                 finalAudio = this.noiseMixer.mixAudio(audioChunk);
+                console.log(`🔊 Audio mixed with background noise: ${finalAudio.length} bytes`);
             }
 
             // Emit audio for browser calls or send to phone
             if (this.callType === 'browser') {
+                console.log(`📡 Emitting tts-audio event for browser: ${finalAudio.length} bytes`);
                 this.emit('tts-audio', finalAudio);
             } else {
                 // For phone calls, send audio to Telnyx
@@ -303,6 +306,7 @@ export class ConversationLoop extends EventEmitter {
         try {
             this.isAISpeaking = true;
             console.log(`🗣️ AI speaking: "${text}"`);
+            console.log(`🔌 TTS connection status: ${this.tts ? 'connected' : 'not connected'}`);
 
             // Send text to browser/phone for display
             if (this.onSpeak) {
@@ -311,13 +315,15 @@ export class ConversationLoop extends EventEmitter {
             }
 
             // Use Telnyx TTS for audio synthesis (all call types)
-            console.log(`🎤 Synthesizing with Telnyx TTS (voice: ${this.voice})`);
+            console.log(`🎤 Calling TTS synthesize with voice: ${this.voice}`);
             await this.tts.synthesize(text);
+            console.log(`✅ TTS synthesize call completed`);
 
             // Note: isAISpeaking will be set to false by TTS 'done' event
 
         } catch (error) {
             console.error('❌ Error speaking:', error);
+            console.error('Error stack:', error instanceof Error ? error.stack : 'No stack');
             this.isAISpeaking = false;
             // Don't throw - just log and continue
         }

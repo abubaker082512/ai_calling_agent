@@ -37,12 +37,7 @@ export class TelnyxTTSService extends EventEmitter {
             this.ws!.on('open', () => {
                 console.log(`✅ Telnyx TTS connected with voice: ${this.config.voice}`);
                 this.isConnected = true;
-
-                // Send initialization frame
-                this.ws!.send(JSON.stringify({
-                    text: ' '
-                }));
-
+                // Don't send initialization frame - it might cause auto-close
                 resolve();
             });
 
@@ -82,16 +77,9 @@ export class TelnyxTTSService extends EventEmitter {
     }
 
     async synthesize(text: string): Promise<void> {
-        // Auto-reconnect if connection was lost
         if (!this.isConnected || !this.ws) {
-            console.warn('⚠️ TTS not connected, attempting to reconnect...');
-            try {
-                await this.connect();
-                console.log('✅ TTS reconnected successfully');
-            } catch (reconnectError) {
-                console.error('❌ Failed to reconnect TTS:', reconnectError);
-                throw new Error('TTS not connected');
-            }
+            console.error('❌ TTS not connected - connection state:', this.isConnected);
+            throw new Error('TTS not connected');
         }
 
         console.log(`🗣️ Synthesizing with ${this.config.voice}: "${text}"`);

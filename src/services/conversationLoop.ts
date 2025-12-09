@@ -204,7 +204,10 @@ export class ConversationLoop extends EventEmitter {
             let context = await this.stateManager.getContext(this.callId);
             if (!context) {
                 console.warn('⚠️ No conversation context found, creating new one');
+                const systemPrompt = 'You are a helpful AI assistant speaking with a customer. Be concise and natural.';
                 context = {
+                    callId: this.callId,
+                    systemPrompt: systemPrompt,
                     messages: [],
                     metadata: {
                         startTime: new Date(),

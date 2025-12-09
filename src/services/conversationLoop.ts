@@ -183,54 +183,62 @@ export class ConversationLoop extends EventEmitter {
      * Handle incoming transcript from Deepgram
      */
     private async handleTranscript(result: TranscriptResult): Promise<void> {
-        if (!result.isFinal || !result.text.trim()) {
-            return;
+        try {
+            if (!result.isFinal || !result.text.trim()) {
+                return;
+            }
+
+            const userText = result.text.trim();
+            console.log(`👤 User said: "${userText}"`);
+
+            // Broadcast user message to WebSocket clients
+            this.broadcastMessage('human', userText, result.confidence);
+
+            // Save user message
+            await this.stateManager.addMessage(this.callId, 'user', userText);
+
+            // Save to database
+            await this.supabase.saveTranscript(this.callId, 'human', userText, result.confidence);
+
+            // Get conversation context
+            let context = await this.stateManager.getContext(this.callId);
+            if (!context) {
+                console.warn('⚠️ No conversation context found, creating new one');
+                context = {
+                    messages: [],
+                    metadata: {
+                        startTime: new Date(),
+                        callerPhone: this.callControlId,
+                        callPurpose: 'support'
+                    }
+                };
+            }
+
+            console.log(`🤖 Generating AI response for: "${userText}"`);
+            const aiResponse = await this.conversationEngine.generateResponse(context, userText);
+            console.log(`✅ AI response generated: "${aiResponse}"`);
+
+            // Broadcast AI message to WebSocket clients
+            this.broadcastMessage('ai', aiResponse, 1.0);
+
+            // Save AI response
+            await this.stateManager.addMessage(this.callId, 'assistant', aiResponse);
+            await this.supabase.saveTranscript(this.callId, 'ai', aiResponse, 1.0);
+
+            // Speak AI response
+            await this.speak(aiResponse);
+
+        } catch (error) {
+            console.error('❌ Error in handleTranscript:', error);
+            // Don't crash - try to respond with error message
+            try {
+                const errorMessage = "I apologize, I'm having trouble processing that. Could you please repeat?";
+                this.broadcastMessage('ai', errorMessage, 1.0);
+                await this.speak(errorMessage);
+            } catch (fallbackError) {
+                console.error('❌ Error in fallback response:', fallbackError);
+            }
         }
-
-        const userText = result.text.trim();
-        console.log(`👤 User said: "${userText}"`);
-
-        // Broadcast user message to WebSocket clients
-        this.broadcastMessage('human', userText, result.confidence);
-
-        // Save user message
-        await this.stateManager.addMessage(this.callId, 'user', userText);
-
-        // Save to database
-        await this.supabase.saveTranscript(this.callId, 'human', userText, result.confidence);
-
-        // Generate AI response
-        let context = await this.stateManager.getContext(this.callId);
-        if (!context) {
-            console.error('❌ No conversation context found, creating minimal context');
-            // Create minimal context as fallback
-            context = {
-                callId: this.callId,
-                systemPrompt: 'You are a helpful AI assistant speaking with a customer over the phone. Be concise and natural.',
-                messages: [
-                    { role: 'user', content: userText, timestamp: new Date() }
-                ],
-                metadata: {
-                    callerPhone: this.callControlId,
-                    callPurpose: 'support',
-                    startTime: new Date()
-                }
-            };
-        }
-
-        console.log(`🤖 Generating AI response for: "${userText}"`);
-        const aiResponse = await this.conversationEngine.generateResponse(context, userText);
-        console.log(`✅ AI response generated: "${aiResponse}"`);
-
-        // Broadcast AI message to WebSocket clients
-        this.broadcastMessage('ai', aiResponse, 1.0);
-
-        // Save AI response
-        await this.stateManager.addMessage(this.callId, 'assistant', aiResponse);
-        await this.supabase.saveTranscript(this.callId, 'ai', aiResponse, 1.0);
-
-        // Speak AI response
-        await this.speak(aiResponse);
     }
 
     /**
@@ -308,7 +316,7 @@ export class ConversationLoop extends EventEmitter {
         } catch (error) {
             console.error('❌ Error speaking:', error);
             this.isAISpeaking = false;
-            throw error;
+            // Don't throw - just log and continue
         }
     }
 

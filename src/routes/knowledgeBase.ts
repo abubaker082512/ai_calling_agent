@@ -1,276 +1,237 @@
-import express from 'express';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { KnowledgeBaseService } from '../services/knowledgeBase';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs/promises';
 
-const router = express.Router();
 const kbService = new KnowledgeBaseService();
 
-// Configure multer for file uploads
-const upload = multer({
-    dest: 'uploads/documents/',
-    limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB limit
-    },
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = ['.txt', '.pdf', '.doc', '.docx', '.md'];
-        const ext = path.extname(file.originalname).toLowerCase();
+export default async function knowledgeBaseRoutes(fastify: FastifyInstance) {
+    /**
+     * GET /
+     * List all knowledge bases for the authenticated user
+     */
+    fastify.get('/', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            // TODO: Add authentication
+            const userId = 'default-user-id'; // Temporary: will add auth later
 
-        if (allowedTypes.includes(ext)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type. Allowed: TXT, PDF, DOC, DOCX, MD'));
+            const result = await kbService.listKnowledgeBases(userId);
+
+            if (!result.success) {
+                return reply.status(500).send({ error: result.error });
+            }
+
+            return result.data;
+
+        } catch (error: any) {
+            console.error('Error listing knowledge bases:', error);
+            return reply.status(500).send({ error: error.message });
         }
-    }
-});
+    });
 
-/**
- * GET /api/knowledge-bases
- * List all knowledge bases for the authenticated user
- */
-router.get('/', async (req, res) => {
-    try {
-        // TODO: Add authentication
-        const userId = 'default-user-id'; // Temporary: will add auth later
+    /**
+     * POST /
+     * Create a new knowledge base
+     */
+    fastify.post('/', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            // TODO: Add authentication
+            const userId = 'default-user-id'; // Temporary: will add auth later
 
-        const result = await kbService.listKnowledgeBases(userId);
+            const { name, description } = request.body as any;
 
-        if (!result.success) {
-            return res.status(500).json({ error: result.error });
+            if (!name) {
+                return reply.status(400).send({ error: 'Name is required' });
+            }
+
+            const result = await kbService.createKnowledgeBase({
+                user_id: userId,
+                name,
+                description
+            });
+
+            if (!result.success) {
+                return reply.status(500).send({ error: result.error });
+            }
+
+            return reply.status(201).send(result.data);
+
+        } catch (error: any) {
+            console.error('Error creating knowledge base:', error);
+            return reply.status(500).send({ error: error.message });
         }
+    });
 
-        res.json(result.data);
+    /**
+     * GET /:id
+     * Get a specific knowledge base
+     */
+    fastify.get('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const { id } = request.params as any;
 
-    } catch (error: any) {
-        console.error('Error listing knowledge bases:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
+            const result = await kbService.getKnowledgeBase(id);
 
-/**
- * POST /api/knowledge-bases
- * Create a new knowledge base
- */
-router.post('/', async (req, res) => {
-    try {
-        // TODO: Add authentication
-        const userId = 'default-user-id'; // Temporary: will add auth later
+            if (!result.success) {
+                return reply.status(404).send({ error: result.error });
+            }
 
-        const { name, description } = req.body;
+            return result.data;
 
-        if (!name) {
-            return res.status(400).json({ error: 'Name is required' });
+        } catch (error: any) {
+            console.error('Error getting knowledge base:', error);
+            return reply.status(500).send({ error: error.message });
         }
+    });
 
-        const result = await kbService.createKnowledgeBase({
-            user_id: userId,
-            name,
-            description
-        });
+    /**
+     * PUT /:id
+     * Update a knowledge base
+     */
+    fastify.put('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const { id } = request.params as any;
+            const { name, description, is_active } = request.body as any;
 
-        if (!result.success) {
-            return res.status(500).json({ error: result.error });
+            const result = await kbService.updateKnowledgeBase(id, {
+                name,
+                description,
+                is_active
+            });
+
+            if (!result.success) {
+                return reply.status(500).send({ error: result.error });
+            }
+
+            return result.data;
+
+        } catch (error: any) {
+            console.error('Error updating knowledge base:', error);
+            return reply.status(500).send({ error: error.message });
         }
+    });
 
-        res.status(201).json(result.data);
+    /**
+     * DELETE /:id
+     * Delete a knowledge base
+     */
+    fastify.delete('/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const { id } = request.params as any;
 
-    } catch (error: any) {
-        console.error('Error creating knowledge base:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
+            const result = await kbService.deleteKnowledgeBase(id);
 
-/**
- * GET /api/knowledge-bases/:id
- * Get a specific knowledge base
- */
-router.get('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
+            if (!result.success) {
+                return reply.status(500).send({ error: result.error });
+            }
 
-        const result = await kbService.getKnowledgeBase(id);
+            return { message: 'Knowledge base deleted successfully' };
 
-        if (!result.success) {
-            return res.status(404).json({ error: result.error });
+        } catch (error: any) {
+            console.error('Error deleting knowledge base:', error);
+            return reply.status(500).send({ error: error.message });
         }
+    });
 
-        res.json(result.data);
+    /**
+     * POST /:id/documents
+     * Add a document to a knowledge base
+     */
+    fastify.post('/:id/documents', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const { id } = request.params as any;
+            const { title, content, source_url } = request.body as any;
 
-    } catch (error: any) {
-        console.error('Error getting knowledge base:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
+            if (!content) {
+                return reply.status(400).send({ error: 'Content is required' });
+            }
 
-/**
- * PUT /api/knowledge-bases/:id
- * Update a knowledge base
- */
-router.put('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, description, is_active } = req.body;
+            const result = await kbService.addDocument({
+                knowledge_base_id: id,
+                title: title || 'Untitled',
+                content: content,
+                source_type: source_url ? 'url' : 'text',
+                source_url
+            });
 
-        const result = await kbService.updateKnowledgeBase(id, {
-            name,
-            description,
-            is_active
-        });
+            if (!result.success) {
+                return reply.status(500).send({ error: result.error });
+            }
 
-        if (!result.success) {
-            return res.status(500).json({ error: result.error });
+            return reply.status(201).send(result.data);
+
+        } catch (error: any) {
+            console.error('Error adding document:', error);
+            return reply.status(500).send({ error: error.message });
         }
+    });
 
-        res.json(result.data);
+    /**
+     * GET /:id/documents
+     * List all documents in a knowledge base
+     */
+    fastify.get('/:id/documents', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const { id } = request.params as any;
 
-    } catch (error: any) {
-        console.error('Error updating knowledge base:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
+            const result = await kbService.listDocuments(id);
 
-/**
- * DELETE /api/knowledge-bases/:id
- * Delete a knowledge base
- */
-router.delete('/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
+            if (!result.success) {
+                return reply.status(500).send({ error: result.error });
+            }
 
-        const result = await kbService.deleteKnowledgeBase(id);
+            return result.data;
 
-        if (!result.success) {
-            return res.status(500).json({ error: result.error });
+        } catch (error: any) {
+            console.error('Error listing documents:', error);
+            return reply.status(500).send({ error: error.message });
         }
+    });
 
-        res.json({ message: 'Knowledge base deleted successfully' });
+    /**
+     * DELETE /:id/documents/:docId
+     * Delete a document
+     */
+    fastify.delete('/:id/documents/:docId', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const { docId } = request.params as any;
 
-    } catch (error: any) {
-        console.error('Error deleting knowledge base:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
+            const result = await kbService.deleteDocument(docId);
 
-/**
- * POST /api/knowledge-bases/:id/documents
- * Add a document to a knowledge base
- */
-router.post('/:id/documents', upload.single('file'), async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { title, content, source_url } = req.body;
-        const file = req.file;
+            if (!result.success) {
+                return reply.status(500).send({ error: result.error });
+            }
 
-        let documentContent = content;
-        let sourceType: 'file' | 'url' | 'text' = 'text';
+            return { message: 'Document deleted successfully' };
 
-        // If file was uploaded, read its content
-        if (file) {
-            const fileContent = await fs.readFile(file.path, 'utf-8');
-            documentContent = fileContent;
-            sourceType = 'file';
-
-            // Clean up uploaded file
-            await fs.unlink(file.path);
-        } else if (source_url) {
-            // TODO: Implement URL scraping
-            sourceType = 'url';
+        } catch (error: any) {
+            console.error('Error deleting document:', error);
+            return reply.status(500).send({ error: error.message });
         }
+    });
 
-        if (!documentContent) {
-            return res.status(400).json({ error: 'Content or file is required' });
+    /**
+     * POST /:id/search
+     * Search within a knowledge base
+     */
+    fastify.post('/:id/search', async (request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const { id } = request.params as any;
+            const { query } = request.body as any;
+
+            if (!query) {
+                return reply.status(400).send({ error: 'Query is required' });
+            }
+
+            const result = await kbService.searchKnowledgeBase(id, query);
+
+            if (!result.success) {
+                return reply.status(500).send({ error: result.error });
+            }
+
+            return result.data;
+
+        } catch (error: any) {
+            console.error('Error searching knowledge base:', error);
+            return reply.status(500).send({ error: error.message });
         }
-
-        const result = await kbService.addDocument({
-            knowledge_base_id: id,
-            title: title || file?.originalname || 'Untitled',
-            content: documentContent,
-            source_type: sourceType,
-            source_url
-        });
-
-        if (!result.success) {
-            return res.status(500).json({ error: result.error });
-        }
-
-        res.status(201).json(result.data);
-
-    } catch (error: any) {
-        console.error('Error adding document:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * GET /api/knowledge-bases/:id/documents
- * List all documents in a knowledge base
- */
-router.get('/:id/documents', async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const result = await kbService.listDocuments(id);
-
-        if (!result.success) {
-            return res.status(500).json({ error: result.error });
-        }
-
-        res.json(result.data);
-
-    } catch (error: any) {
-        console.error('Error listing documents:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * DELETE /api/knowledge-bases/:id/documents/:docId
- * Delete a document
- */
-router.delete('/:id/documents/:docId', async (req, res) => {
-    try {
-        const { docId } = req.params;
-
-        const result = await kbService.deleteDocument(docId);
-
-        if (!result.success) {
-            return res.status(500).json({ error: result.error });
-        }
-
-        res.json({ message: 'Document deleted successfully' });
-
-    } catch (error: any) {
-        console.error('Error deleting document:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * POST /api/knowledge-bases/:id/search
- * Search within a knowledge base
- */
-router.post('/:id/search', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { query } = req.body;
-
-        if (!query) {
-            return res.status(400).json({ error: 'Query is required' });
-        }
-
-        const result = await kbService.searchKnowledgeBase(id, query);
-
-        if (!result.success) {
-            return res.status(500).json({ error: result.error });
-        }
-
-        res.json(result.data);
-
-    } catch (error: any) {
-        console.error('Error searching knowledge base:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-export default router;
+    });
+}

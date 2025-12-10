@@ -25,7 +25,7 @@ export class ConversationLoop extends EventEmitter {
     private conversationEngine: ConversationEngine;
     private stateManager: ConversationStateManager;
     private telnyx: TelnyxService;
-    private tts: ElevenLabsTTSService;
+    private tts: TelnyxTTSRestService;
     private supabase: SupabaseService;
     private noiseMixer?: BackgroundNoiseMixer;
 
@@ -54,13 +54,12 @@ export class ConversationLoop extends EventEmitter {
         this.telnyx = new TelnyxService();
         this.supabase = new SupabaseService();
 
-        // Initialize TTS with ElevenLabs (more reliable than Telnyx)
-        this.tts = new ElevenLabsTTSService({
-            apiKey: process.env.ELEVENLABS_API_KEY || '',
-            voice: 'EXAVITQu4vr4xnSDxMaL' // Sarah voice - natural and clear
+        // Initialize TTS with Telnyx REST API (reliable, returns complete MP3)
+        this.tts = new TelnyxTTSRestService(process.env.TELNYX_API_KEY!, {
+            voice: this.voice
         });
 
-        console.log(`🎙️ ElevenLabs TTS initialized`);
+        console.log(`🎙️ Telnyx TTS initialized with voice: ${this.voice} (REST API)`);
 
         // Initialize background noise mixer if enabled
         if (config.backgroundNoise && config.backgroundNoise !== 'none') {

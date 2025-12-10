@@ -67,7 +67,9 @@ fastify.get('/api/stats', async (request, reply) => {
 });
 
 // Register Knowledge Base API routes
-fastify.register(knowledgeBaseRoutes, { prefix: '/api/knowledge-bases' });
+fastify.register(async (instance) => {
+    instance.register(knowledgeBaseRoutes);
+}, { prefix: '/api/knowledge-bases' });
 
 // API: Test Voice (Browser-based TTS using Telnyx)
 fastify.post('/api/test/voice', async (request, reply) => {

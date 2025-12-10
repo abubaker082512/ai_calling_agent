@@ -31,11 +31,8 @@ const upload = multer({
  */
 router.get('/', async (req, res) => {
     try {
-        const userId = req.user?.id; // Assuming auth middleware sets req.user
-
-        if (!userId) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
+        // TODO: Add authentication
+        const userId = 'default-user-id'; // Temporary: will add auth later
 
         const result = await kbService.listKnowledgeBases(userId);
 
@@ -57,11 +54,8 @@ router.get('/', async (req, res) => {
  */
 router.post('/', async (req, res) => {
     try {
-        const userId = req.user?.id;
-
-        if (!userId) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
+        // TODO: Add authentication
+        const userId = 'default-user-id'; // Temporary: will add auth later
 
         const { name, description } = req.body;
 

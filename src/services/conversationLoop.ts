@@ -18,6 +18,11 @@ export interface ConversationLoopConfig {
     backgroundNoise?: BackgroundNoiseType; // Background noise environment
     noiseLevel?: number; // Noise level 0-100
     onSpeak?: (text: string) => Promise<void>;
+    agentId?: string; // Optional: Use specific agent configuration
+    knowledgeBaseId?: string; // Optional: Link to knowledge base for RAG
+    systemPrompt?: string; // Optional: Override system prompt
+    temperature?: number; // Optional: LLM temperature
+    maxTokens?: number; // Optional: Max response tokens
 }
 
 export class ConversationLoop extends EventEmitter {

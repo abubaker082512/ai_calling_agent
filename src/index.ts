@@ -10,6 +10,7 @@ import { handleTelnyxWebhook } from './webhooks/telnyxWebhooks';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import knowledgeBaseRoutes from './routes/knowledgeBase';
+import agentRoutes from './routes/agents';
 
 dotenv.config();
 
@@ -70,6 +71,11 @@ fastify.get('/api/stats', async (request, reply) => {
 fastify.register(async (instance) => {
     instance.register(knowledgeBaseRoutes);
 }, { prefix: '/api/knowledge-bases' });
+
+// Register Agent API routes
+fastify.register(async (instance) => {
+    instance.register(agentRoutes);
+}, { prefix: '/api/agents' });
 
 // API: Test Voice (Browser-based TTS using Telnyx)
 fastify.post('/api/test/voice', async (request, reply) => {

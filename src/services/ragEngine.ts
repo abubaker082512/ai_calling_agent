@@ -27,19 +27,24 @@ export interface KnowledgeBase {
  * Handles knowledge base queries and context augmentation
  */
 export class RAGEngine {
-    private supabase;
+    private _supabase: any;
     private embeddingModel;
 
     constructor() {
-        this.supabase = createClient(
-            process.env.SUPABASE_URL || '',
-            process.env.SUPABASE_KEY || ''
-        );
-
         // Use Gemini for embeddings
         this.embeddingModel = genAI.getGenerativeModel({
             model: 'embedding-001'
         });
+    }
+
+    private get supabase() {
+        if (!this._supabase) {
+            this._supabase = createClient(
+                process.env.SUPABASE_URL || '',
+                process.env.SUPABASE_KEY || ''
+            );
+        }
+        return this._supabase;
     }
 
     /**

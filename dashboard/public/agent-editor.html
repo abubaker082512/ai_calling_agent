@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Editor - AI Calling Agent</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Top Bar -->
+    <div class="editor-topbar">
+        <div class="topbar-left">
+            <a href="agents.html" class="back-button">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+                Back to Agents
+            </a>
+            <input type="text" id="agentName" class="agent-name-input" placeholder="Agent Name" value="New Agent">
+        </div>
+        <div class="topbar-right">
+            <button class="btn-secondary" onclick="testAgent()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                Test Agent
+            </button>
+            <button class="btn-primary" onclick="saveAgent()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                Save Agent
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Editor Layout -->
+    <div class="editor-layout">
+        <!-- Left Panel - System Prompt -->
+        <div class="editor-left">
+            <div class="section">
+                <label class="section-label">System Prompt</label>
+                <textarea id="systemPrompt" class="prompt-editor" rows="15"
+                    placeholder="You are a helpful AI assistant. Be friendly, professional, and concise..."></textarea>
+            </div>
+
+            <div class="section">
+                <label class="section-label">Welcome Message</label>
+                <input type="text" id="greeting" class="input-field" placeholder="Hello! How can I help you today?">
+            </div>
+
+            <div class="section">
+                <label class="section-label">Description (Optional)</label>
+                <textarea id="description" class="input-field" rows="3"
+                    placeholder="Brief description of this agent's purpose..."></textarea>
+            </div>
+        </div>
+
+        <!-- Right Panel - Configuration -->
+        <div class="editor-right">
+            <!-- Quick Settings -->
+            <div class="quick-settings">
+                <div class="setting-group">
+                    <label>Voice</label>
+                    <select id="voiceSelect" class="select-field">
+                        <option value="AWS.Polly.Joanna-Neural">Joanna (AWS)</option>
+                        <option value="AWS.Polly.Matthew-Neural">Matthew (AWS)</option>
+                        <option value="Azure.Neural.Jenny">Jenny (Azure)</option>
+                        <option value="Google.Neural.en-US-Wavenet-A">Wavenet A (Google)</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label>Status</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="isActive" checked>
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">Active</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Configuration Sections -->
+            <div class="config-sections">
+                <!-- Knowledge Base Section -->
+                <div class="config-section">
+                    <div class="section-header" onclick="toggleSection('kb')">
+                        <div class="section-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                            Knowledge Base
+                        </div>
+                        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content" id="kb-content">
+                        <select id="knowledgeBaseSelect" class="select-field">
+                            <option value="">No Knowledge Base</option>
+                        </select>
+                        <p class="section-hint">Link a knowledge base to provide context for this agent</p>
+                    </div>
+                </div>
+
+                <!-- Voice & Speech Settings -->
+                <div class="config-section">
+                    <div class="section-header" onclick="toggleSection('voice')">
+                        <div class="section-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            </svg>
+                            Voice & Speech Settings
+                        </div>
+                        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content collapsed" id="voice-content">
+                        <div class="form-group">
+                            <label>Background Noise</label>
+                            <select id="backgroundNoise" class="select-field">
+                                <option value="none">None</option>
+                                <option value="office">Office</option>
+                                <option value="cafe">Cafe</option>
+                                <option value="street">Street</option>
+                                <option value="restaurant">Restaurant</option>
+                                <option value="callcenter">Call Center</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Noise Level: <span id="noiseLevelValue">10</span>%</label>
+                            <input type="range" id="noiseLevel" min="0" max="100" value="10"
+                                oninput="document.getElementById('noiseLevelValue').textContent = this.value">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LLM Settings -->
+                <div class="config-section">
+                    <div class="section-header" onclick="toggleSection('llm')">
+                        <div class="section-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path
+                                    d="M12 1v6m0 6v6m5.66-13.66l-4.24 4.24m-2.83 2.83l-4.24 4.24m13.66-1.42l-4.24-4.24m-2.83-2.83l-4.24-4.24">
+                                </path>
+                            </svg>
+                            LLM Settings
+                        </div>
+                        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content collapsed" id="llm-content">
+                        <div class="form-group">
+                            <label>Temperature: <span id="temperatureValue">0.7</span></label>
+                            <input type="range" id="temperature" min="0" max="1" step="0.1" value="0.7"
+                                oninput="document.getElementById('temperatureValue').textContent = this.value">
+                            <p class="field-hint">Higher = more creative, Lower = more focused</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Max Tokens</label>
+                            <input type="number" id="maxTokens" class="input-field" value="150" min="50" max="500">
+                            <p class="field-hint">Maximum length of AI responses</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversation Settings -->
+                <div class="config-section">
+                    <div class="section-header" onclick="toggleSection('conversation')">
+                        <div class="section-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            Conversation Settings
+                        </div>
+                        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content collapsed" id="conversation-content">
+                        <div class="form-group">
+                            <label class="toggle">
+                                <input type="checkbox" id="interruptionEnabled" checked>
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Enable Interruption</span>
+                            </label>
+                            <p class="field-hint">Allow user to interrupt AI while speaking</p>
+                        </div>
+                        <div class="form-group">
+                            <label>Silence Timeout (ms)</label>
+                            <input type="number" id="silenceTimeout" class="input-field" value="3000" step="500">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Call Duration (seconds)</label>
+                            <input type="number" id="maxDuration" class="input-field" value="1800" step="60">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Settings -->
+                <div class="config-section">
+                    <div class="section-header" onclick="toggleSection('advanced')">
+                        <div class="section-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                                </path>
+                            </svg>
+                            Advanced Settings
+                        </div>
+                        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content collapsed" id="advanced-content">
+                        <div class="form-group">
+                            <label class="toggle">
+                                <input type="checkbox" id="recordingEnabled" checked>
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Enable Call Recording</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="toggle">
+                                <input type="checkbox" id="transcriptionEnabled" checked>
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Enable Transcription</span>
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>Webhook URL (Optional)</label>
+                            <input type="url" id="webhookUrl" class="input-field"
+                                placeholder="https://your-webhook.com/endpoint">
+                            <p class="field-hint">Receive call events and transcripts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .editor-topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .back-button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .back-button:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .agent-name-input {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 18px;
+            font-weight: 600;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .agent-name-input:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .agent-name-input:focus {
+            outline: none;
+            background: var(--bg-tertiary);
+        }
+
+        .topbar-right {
+            display: flex;
+            gap: 12px;
+        }
+
+        .editor-layout {
+            margin-top: 60px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            height: calc(100vh - 60px);
+        }
+
+        .editor-left {
+            padding: 24px;
+            overflow-y: auto;
+            background: var(--bg-primary);
+        }
+
+        .editor-right {
+            padding: 24px;
+            overflow-y: auto;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .section-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .prompt-editor {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            color: var(--text-primary);
+            font-family: 'Inter', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        .prompt-editor:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .input-field {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .select-field {
+            width: 100%;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .quick-settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .setting-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        .config-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .config-section {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .section-header:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .chevron {
+            transition: transform 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .section-header.expanded .chevron {
+            transform: rotate(180deg);
+        }
+
+        .section-content {
+            padding: 0 16px 16px;
+            max-height: 1000px;
+            transition: all 0.3s;
+        }
+
+        .section-content.collapsed {
+            max-height: 0;
+            padding: 0 16px;
+            overflow: hidden;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .field-hint,
+        .section-hint {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .toggle input {
+            display: none;
+        }
+
+        .toggle-slider {
+            width: 40px;
+            height: 22px;
+            background: var(--border);
+            border-radius: 11px;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: all 0.2s;
+        }
+
+        .toggle input:checked+.toggle-slider {
+            background: var(--accent);
+        }
+
+        .toggle input:checked+.toggle-slider::before {
+            left: 20px;
+        }
+
+        .toggle-label {
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+    </style>
+
+    <script src="agent-editor.js"></script>
+</body>
+
+</html>

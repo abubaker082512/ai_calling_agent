@@ -2,7 +2,7 @@ import { DeepgramService, TranscriptResult } from './deepgramService';
 import { ConversationEngine, ConversationContext } from './conversationEngine';
 import { ConversationStateManager } from './conversationState';
 import { TelnyxService } from './telnyx';
-import { TelnyxTTSService } from './telnyxTTS';
+import { ElevenLabsTTSService } from './elevenLabsTTS';
 import { SupabaseService } from './supabase';
 import { BackgroundNoiseMixer, BackgroundNoiseType } from './backgroundNoiseMixer';
 import EventEmitter from 'events';
@@ -25,7 +25,7 @@ export class ConversationLoop extends EventEmitter {
     private conversationEngine: ConversationEngine;
     private stateManager: ConversationStateManager;
     private telnyx: TelnyxService;
-    private tts: TelnyxTTSService;
+    private tts: ElevenLabsTTSService;
     private supabase: SupabaseService;
     private noiseMixer?: BackgroundNoiseMixer;
 
@@ -54,14 +54,13 @@ export class ConversationLoop extends EventEmitter {
         this.telnyx = new TelnyxService();
         this.supabase = new SupabaseService();
 
-        // Initialize TTS with selected voice (WebSocket with chunk buffering)
-        this.tts = new TelnyxTTSService(process.env.TELNYX_API_KEY!, {
-            voice: this.voice,
-            encoding: 'mp3',
-            sampleRate: 24000
+        // Initialize TTS with ElevenLabs (more reliable than Telnyx)
+        this.tts = new ElevenLabsTTSService({
+            apiKey: process.env.ELEVENLABS_API_KEY || '',
+            voice: 'EXAVITQu4vr4xnSDxMaL' // Sarah voice - natural and clear
         });
 
-        console.log(`🎙️ TTS initialized with voice: ${this.voice} (WebSocket)`);
+        console.log(`🎙️ ElevenLabs TTS initialized`);
 
         // Initialize background noise mixer if enabled
         if (config.backgroundNoise && config.backgroundNoise !== 'none') {

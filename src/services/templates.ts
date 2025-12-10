@@ -72,7 +72,7 @@ export class TemplatesService {
      */
     async getTemplate(templateId: string) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await getSupabase()
                 .from('conversation_templates')
                 .select('*')
                 .eq('id', templateId)
@@ -93,7 +93,7 @@ export class TemplatesService {
      */
     async createTemplate(template: TemplateCreate) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await getSupabase()
                 .from('conversation_templates')
                 .insert({
                     user_id: template.user_id,
@@ -125,7 +125,7 @@ export class TemplatesService {
      */
     async updateTemplate(templateId: string, updates: Partial<TemplateCreate>) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await getSupabase()
                 .from('conversation_templates')
                 .update(updates)
                 .eq('id', templateId)
@@ -148,7 +148,7 @@ export class TemplatesService {
      */
     async deleteTemplate(templateId: string) {
         try {
-            const { error } = await supabase
+            const { error } = await getSupabase()
                 .from('conversation_templates')
                 .delete()
                 .eq('id', templateId);
@@ -202,7 +202,7 @@ export class TemplatesService {
      */
     async searchTemplates(userId: string, query: string) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await getSupabase()
                 .from('conversation_templates')
                 .select('*')
                 .or(`user_id.eq.${userId},is_public.eq.true`)

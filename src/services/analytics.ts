@@ -51,7 +51,7 @@ export class AnalyticsService {
             startDate.setDate(startDate.getDate() - days);
 
             // Get all agent metrics for the period
-            const { data: metrics, error } = await supabase
+            const { data: metrics, error } = await getSupabase()
                 .from('agent_metrics')
                 .select('*')
                 .gte('date', startDate.toISOString().split('T')[0]);
@@ -71,7 +71,7 @@ export class AnalyticsService {
             }
 
             // Aggregate metrics
-            const totals = metrics.reduce((acc, m) => ({
+            const totals = metrics.reduce((acc: any, m: any) => ({
                 totalCalls: acc.totalCalls + m.total_calls,
                 successfulCalls: acc.successfulCalls + m.successful_calls,
                 failedCalls: acc.failedCalls + m.failed_calls,
@@ -121,7 +121,7 @@ export class AnalyticsService {
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - days);
 
-            const { data: metrics, error } = await supabase
+            const { data: metrics, error } = await getSupabase()
                 .from('agent_metrics')
                 .select('date, total_calls, successful_calls, failed_calls')
                 .gte('date', startDate.toISOString().split('T')[0])
@@ -136,7 +136,7 @@ export class AnalyticsService {
             // Group by date
             const trendMap = new Map<string, CallTrend>();
 
-            metrics.forEach(m => {
+            metrics.forEach((m: any) => {
                 const existing = trendMap.get(m.date) || {
                     date: m.date,
                     calls: 0,
@@ -168,7 +168,7 @@ export class AnalyticsService {
     async getTopAgents(limit: number = 10): Promise<AgentPerformance[]> {
         try {
             // Get agents with their metrics
-            const { data: agents, error: agentsError } = await supabase
+            const { data: agents, error: agentsError } = await getSupabase()
                 .from('ai_agents')
                 .select(`
                     id,
@@ -191,7 +191,7 @@ export class AnalyticsService {
             }
 
             // Calculate performance for each agent
-            const performance: AgentPerformance[] = agents.map(agent => {
+            const performance: AgentPerformance[] = agents.map((agent: any) => {
                 const metrics = agent.metrics || [];
 
                 const totals = metrics.reduce((acc: any, m: any) => ({
@@ -258,7 +258,7 @@ export class AnalyticsService {
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - days);
 
-            const { data: metrics, error } = await supabase
+            const { data: metrics, error } = await getSupabase()
                 .from('agent_metrics')
                 .select('date, sentiment_positive, sentiment_neutral, sentiment_negative')
                 .gte('date', startDate.toISOString().split('T')[0])
@@ -273,7 +273,7 @@ export class AnalyticsService {
             // Group by date
             const trendMap = new Map<string, any>();
 
-            metrics.forEach(m => {
+            metrics.forEach((m: any) => {
                 const existing = trendMap.get(m.date) || {
                     date: m.date,
                     positive: 0,

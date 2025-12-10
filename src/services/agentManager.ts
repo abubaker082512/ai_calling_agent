@@ -74,7 +74,7 @@ export class AgentManager {
      */
     async createAgent(data: AgentCreate) {
         try {
-            const { data: agent, error } = await supabase
+            const { data: agent, error } = await getSupabase()
                 .from('ai_agents')
                 .insert({
                     user_id: data.user_id,
@@ -119,7 +119,7 @@ export class AgentManager {
      */
     async listAgents(userId: string) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await getSupabase()
                 .from('ai_agents')
                 .select(`
                     *,
@@ -148,7 +148,7 @@ export class AgentManager {
      */
     async getAgent(agentId: string) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await getSupabase()
                 .from('ai_agents')
                 .select(`
                     *,
@@ -173,7 +173,7 @@ export class AgentManager {
      */
     async updateAgent(agentId: string, updates: AgentUpdate) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await getSupabase()
                 .from('ai_agents')
                 .update(updates)
                 .eq('id', agentId)
@@ -196,7 +196,7 @@ export class AgentManager {
      */
     async deleteAgent(agentId: string) {
         try {
-            const { error } = await supabase
+            const { error } = await getSupabase()
                 .from('ai_agents')
                 .delete()
                 .eq('id', agentId);
@@ -218,7 +218,7 @@ export class AgentManager {
     async cloneAgent(agentId: string, newName: string, userId: string) {
         try {
             // Get original agent
-            const { data: original, error: fetchError } = await supabase
+            const { data: original, error: fetchError } = await getSupabase()
                 .from('ai_agents')
                 .select('*')
                 .eq('id', agentId)
@@ -227,7 +227,7 @@ export class AgentManager {
             if (fetchError) throw fetchError;
 
             // Create clone
-            const { data: clone, error: createError } = await supabase
+            const { data: clone, error: createError } = await getSupabase()
                 .from('ai_agents')
                 .insert({
                     user_id: userId,
@@ -262,7 +262,7 @@ export class AgentManager {
      */
     async getAgentMetrics(agentId: string, days: number = 30) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await getSupabase()
                 .from('agent_metrics')
                 .select('*')
                 .eq('agent_id', agentId)
@@ -272,7 +272,7 @@ export class AgentManager {
             if (error) throw error;
 
             // Calculate aggregate metrics
-            const aggregate = data.reduce((acc, day) => ({
+            const aggregate = data.reduce((acc: any, day: any) => ({
                 total_calls: acc.total_calls + day.total_calls,
                 successful_calls: acc.successful_calls + day.successful_calls,
                 failed_calls: acc.failed_calls + day.failed_calls,
@@ -327,7 +327,7 @@ export class AgentManager {
             const today = new Date().toISOString().split('T')[0];
 
             // Get or create today's metrics
-            const { data: existing } = await supabase
+            const { data: existing } = await getSupabase()
                 .from('agent_metrics')
                 .select('*')
                 .eq('agent_id', agentId)
@@ -336,7 +336,7 @@ export class AgentManager {
 
             if (existing) {
                 // Update existing metrics
-                const { error } = await supabase
+                const { error } = await getSupabase()
                     .from('agent_metrics')
                     .update({
                         total_calls: existing.total_calls + 1,
@@ -354,7 +354,7 @@ export class AgentManager {
                 if (error) throw error;
             } else {
                 // Create new metrics
-                const { error } = await supabase
+                const { error } = await getSupabase()
                     .from('agent_metrics')
                     .insert({
                         agent_id: agentId,

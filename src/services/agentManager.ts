@@ -382,7 +382,12 @@ export class AgentManager {
     /**
      * Create a conversation loop for an agent
      */
-    async createConversationLoop(agentId: string, callId: string): Promise<ConversationLoop | null> {
+    async createConversationLoop(
+        agentId: string,
+        callId: string,
+        callControlId: string = '',
+        callerPhone: string = 'browser-call'
+    ): Promise<ConversationLoop | null> {
         try {
             const result = await this.getAgent(agentId);
 
@@ -394,6 +399,8 @@ export class AgentManager {
 
             const config: ConversationLoopConfig = {
                 callId,
+                callControlId,
+                callerPhone,
                 voice: agent.voice,
                 systemPrompt: agent.system_prompt,
                 knowledgeBaseId: agent.knowledge_base_id,

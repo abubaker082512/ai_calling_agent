@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
 import knowledgeBaseRoutes from './routes/knowledgeBase';
 import agentRoutes from './routes/agents';
+import analyticsRoutes from './routes/analytics';
 
 dotenv.config();
 
@@ -76,6 +77,11 @@ fastify.register(async (instance) => {
 fastify.register(async (instance) => {
     instance.register(agentRoutes);
 }, { prefix: '/api/agents' });
+
+// Register Analytics API routes
+fastify.register(async (instance) => {
+    instance.register(analyticsRoutes);
+}, { prefix: '/api/analytics' });
 
 // API: Test Voice (Browser-based TTS using Telnyx)
 fastify.post('/api/test/voice', async (request, reply) => {

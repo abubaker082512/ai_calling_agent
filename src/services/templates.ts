@@ -1,9 +1,11 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_KEY || ''
-);
+function getSupabase(): SupabaseClient {
+    return createClient(
+        process.env.SUPABASE_URL || '',
+        process.env.SUPABASE_KEY || ''
+    );
+}
 
 export interface ConversationTemplate {
     id: string;
@@ -43,7 +45,7 @@ export class TemplatesService {
      */
     async listTemplates(userId: string, category?: string) {
         try {
-            let query = supabase
+            let query = getSupabase()
                 .from('conversation_templates')
                 .select('*')
                 .or(`user_id.eq.${userId},is_public.eq.true`)
@@ -167,20 +169,20 @@ export class TemplatesService {
      */
     async incrementUsage(templateId: string) {
         try {
-            const { error } = await supabase.rpc('increment_template_usage', {
+            const { error } = await getSupabase().rpc('increment_template_usage', {
                 template_id: templateId
             });
 
             if (error) {
                 // Fallback if RPC doesn't exist
-                const { data: template } = await supabase
+                const { data: template } = await getSupabase()
                     .from('conversation_templates')
                     .select('usage_count')
                     .eq('id', templateId)
                     .single();
 
                 if (template) {
-                    await supabase
+                    await getSupabase()
                         .from('conversation_templates')
                         .update({ usage_count: template.usage_count + 1 })
                         .eq('id', templateId);

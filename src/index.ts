@@ -9,6 +9,7 @@ import { TelnyxService } from './services/telnyx';
 import { handleTelnyxWebhook } from './webhooks/telnyxWebhooks';
 import { v4 as uuidv4 } from 'uuid';
 import axios from 'axios';
+import knowledgeBaseRoutes from './routes/knowledgeBase';
 
 dotenv.config();
 
@@ -64,6 +65,9 @@ fastify.get('/api/stats', async (request, reply) => {
         callsOverTime: stats.callsOverTime
     };
 });
+
+// Register Knowledge Base API routes
+fastify.register(knowledgeBaseRoutes, { prefix: '/api/knowledge-bases' });
 
 // API: Test Voice (Browser-based TTS using Telnyx)
 fastify.post('/api/test/voice', async (request, reply) => {

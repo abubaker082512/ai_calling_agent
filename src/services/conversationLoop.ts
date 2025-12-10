@@ -5,6 +5,7 @@ import { TelnyxService } from './telnyx';
 import { TelnyxTTSService } from './telnyxTTS';
 import { SupabaseService } from './supabase';
 import { BackgroundNoiseMixer, BackgroundNoiseType } from './backgroundNoiseMixer';
+import { SentimentAnalyzer, Sentiment } from './sentimentAnalysis';
 import EventEmitter from 'events';
 
 export interface ConversationLoopConfig {
@@ -33,6 +34,7 @@ export class ConversationLoop extends EventEmitter {
     private tts: TelnyxTTSService;
     private supabase: SupabaseService;
     private noiseMixer?: BackgroundNoiseMixer;
+    private sentimentAnalyzer: SentimentAnalyzer;
 
     private callId: string;
     private callControlId: string;
@@ -74,6 +76,10 @@ export class ConversationLoop extends EventEmitter {
             });
             console.log(`🔊 Background noise enabled: ${config.backgroundNoise}`);
         }
+
+        // Initialize sentiment analyzer
+        this.sentimentAnalyzer = new SentimentAnalyzer();
+        console.log(`💭 Sentiment analysis enabled`);
 
         this.setupEventHandlers();
     }
@@ -205,6 +211,24 @@ export class ConversationLoop extends EventEmitter {
 
             // Save to database
             await this.supabase.saveTranscript(this.callId, 'human', userText, result.confidence);
+
+            // Analyze sentiment
+            try {
+                const sentimentResult = await this.sentimentAnalyzer.analyze(userText);
+                console.log(`💭 Sentiment: ${sentimentResult.sentiment} ${this.sentimentAnalyzer.getSentimentEmoji(sentimentResult.sentiment)}`);
+
+                // Emit sentiment event for real-time tracking
+                this.emit('sentiment', {
+                    sentiment: sentimentResult.sentiment,
+                    text: userText,
+                    timestamp: sentimentResult.timestamp,
+                    emoji: this.sentimentAnalyzer.getSentimentEmoji(sentimentResult.sentiment),
+                    color: this.sentimentAnalyzer.getSentimentColor(sentimentResult.sentiment)
+                });
+            } catch (error) {
+                console.error('⚠️ Sentiment analysis failed:', error);
+                // Continue without sentiment - not critical
+            }
 
             // Get conversation context
             let context = await this.stateManager.getContext(this.callId);

@@ -2,7 +2,7 @@ import { DeepgramService, TranscriptResult } from './deepgramService';
 import { ConversationEngine, ConversationContext } from './conversationEngine';
 import { ConversationStateManager } from './conversationState';
 import { TelnyxService } from './telnyx';
-import { TelnyxTTSRestService } from './telnyxTTSRest';
+import { TelnyxTTSService } from './telnyxTTS';
 import { SupabaseService } from './supabase';
 import { BackgroundNoiseMixer, BackgroundNoiseType } from './backgroundNoiseMixer';
 import EventEmitter from 'events';
@@ -25,7 +25,7 @@ export class ConversationLoop extends EventEmitter {
     private conversationEngine: ConversationEngine;
     private stateManager: ConversationStateManager;
     private telnyx: TelnyxService;
-    private tts: TelnyxTTSRestService;
+    private tts: TelnyxTTSService;
     private supabase: SupabaseService;
     private noiseMixer?: BackgroundNoiseMixer;
 
@@ -54,12 +54,12 @@ export class ConversationLoop extends EventEmitter {
         this.telnyx = new TelnyxService();
         this.supabase = new SupabaseService();
 
-        // Initialize TTS with Telnyx REST API (reliable, returns complete MP3)
-        this.tts = new TelnyxTTSRestService(process.env.TELNYX_API_KEY!, {
+        // Initialize TTS with Telnyx WebSocket (properly implemented)
+        this.tts = new TelnyxTTSService(process.env.TELNYX_API_KEY!, {
             voice: this.voice
         });
 
-        console.log(`🎙️ Telnyx TTS initialized with voice: ${this.voice} (REST API)`);
+        console.log(`🎙️ Telnyx WebSocket TTS initialized with voice: ${this.voice}`);
 
         // Initialize background noise mixer if enabled
         if (config.backgroundNoise && config.backgroundNoise !== 'none') {

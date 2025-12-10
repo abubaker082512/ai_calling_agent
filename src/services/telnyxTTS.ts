@@ -3,114 +3,130 @@ import { EventEmitter } from 'events';
 
 export interface TelnyxTTSConfig {
     voice?: string;
-    sampleRate?: number;
-    encoding?: 'mp3' | 'pcm';
 }
 
+/**
+ * Telnyx TTS Service using WebSocket API
+ * Based on official documentation: https://developers.telnyx.com/docs/voice/programmable-voice/tts-standalone/
+ */
 export class TelnyxTTSService extends EventEmitter {
     private apiKey: string;
-    private config: TelnyxTTSConfig;
+    private voice: string;
+    private ws: WebSocket | null = null;
+    private isConnected: boolean = false;
+    private audioQueue: Buffer[] = [];
 
     constructor(apiKey: string, config: TelnyxTTSConfig = {}) {
         super();
         this.apiKey = apiKey;
-        this.config = {
-            voice: config.voice || 'AWS.Polly.Joanna-Neural',
-            sampleRate: config.sampleRate || 24000,
-            encoding: config.encoding || 'mp3'
-        };
+        this.voice = config.voice || 'AWS.Polly.Joanna-Neural';
     }
 
-    // No persistent connection - create new one for each synthesis
     async connect(): Promise<void> {
-        console.log('✅ TTS service initialized (connections created per synthesis)');
-        // No-op - we create connections on-demand
+        // Connection is created per synthesis request
+        console.log('✅ Telnyx TTS service ready');
     }
 
     async synthesize(text: string): Promise<void> {
-        console.log(`🗣️ Synthesizing with ${this.config.voice}: "${text}"`);
-
         return new Promise((resolve, reject) => {
-            const wsUrl = `wss://api.telnyx.com/v2/text-to-speech/speech?voice=${encodeURIComponent(this.config.voice!)}`;
-            const ws = new WebSocket(wsUrl, {
+            console.log(`🗣️ Synthesizing: "${text}" with voice: ${this.voice}`);
+
+            // Create WebSocket connection with voice parameter
+            const wsUrl = `wss://api.telnyx.com/v2/text-to-speech/speech?voice=${encodeURIComponent(this.voice)}`;
+
+            this.ws = new WebSocket(wsUrl, {
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`
                 }
             });
 
-            const audioQueue: Buffer[] = [];
-            let isConnected = false;
+            this.audioQueue = [];
+            let audioReceived = false;
 
-            ws.on('open', () => {
-                console.log(`🔌 TTS WebSocket opened for synthesis`);
-                isConnected = true;
+            this.ws.on('open', () => {
+                console.log('🔌 TTS WebSocket connected');
+                this.isConnected = true;
 
-                // Send text frame
-                ws.send(JSON.stringify({ text: text }));
+                // Message sequence from documentation:
+                // 1. Initialization frame
+                this.ws!.send(JSON.stringify({ text: ' ' }));
+                console.log('📤 Sent initialization frame');
 
-                // Send stop frame
+                // 2. Text to synthesize
+                this.ws!.send(JSON.stringify({ text: text }));
+                console.log('📤 Sent text frame');
+
+                // 3. Stop signal
                 setTimeout(() => {
-                    ws.send(JSON.stringify({ text: "" }));
-                    console.log('✅ TTS stop frame sent');
+                    this.ws!.send(JSON.stringify({ text: '' }));
+                    console.log('📤 Sent stop frame');
 
-                    // Wait for audio chunks
+                    // Wait for audio chunks to arrive
                     setTimeout(() => {
-                        if (audioQueue.length > 0) {
-                            const completeAudio = Buffer.concat(audioQueue);
-                            console.log(`🎵 Complete MP3: ${completeAudio.length} bytes from ${audioQueue.length} chunks`);
-
+                        if (this.audioQueue.length > 0) {
+                            const completeAudio = Buffer.concat(this.audioQueue);
+                            console.log(`🎵 Complete audio: ${completeAudio.length} bytes from ${this.audioQueue.length} chunks`);
                             this.emit('audio', completeAudio);
                             this.emit('done');
+                            audioReceived = true;
                         } else {
                             console.warn('⚠️ No audio chunks received');
                             this.emit('done');
                         }
 
-                        // Close connection after synthesis
-                        ws.close();
+                        this.ws?.close();
                         resolve();
-                    }, 500);
-                }, 50);
+                    }, 1000); // Wait 1 second for all chunks
+                }, 100);
             });
 
-            ws.on('message', (data: Buffer) => {
+            this.ws.on('message', (data: Buffer) => {
                 try {
                     const message = JSON.parse(data.toString());
 
                     if (message.audio) {
                         const audioBuffer = Buffer.from(message.audio, 'base64');
-                        console.log(`🎵 TTS audio chunk: ${audioBuffer.length} bytes`);
-                        audioQueue.push(audioBuffer);
+                        console.log(`🎵 Audio chunk received: ${audioBuffer.length} bytes`);
+                        this.audioQueue.push(audioBuffer);
                     } else if (message.error) {
                         console.error('❌ TTS error:', message.error);
-                        this.emit('error', new Error(message.error));
-                        ws.close();
                         reject(new Error(message.error));
+                    } else {
+                        console.log('📨 TTS message:', message);
                     }
                 } catch (err) {
                     console.error('Error parsing TTS message:', err);
                 }
             });
 
-            ws.on('error', (error) => {
+            this.ws.on('error', (error) => {
                 console.error('❌ TTS WebSocket error:', error);
                 this.emit('error', error);
                 reject(error);
             });
 
-            ws.on('close', () => {
+            this.ws.on('close', () => {
                 console.log('🔌 TTS WebSocket closed');
+                this.isConnected = false;
+
+                // If we didn't receive audio yet, emit done anyway
+                if (!audioReceived) {
+                    this.emit('done');
+                }
             });
         });
     }
 
     async stop(): Promise<void> {
-        console.log('🛑 TTS service stopped');
-        // No persistent connection to close
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
+        this.isConnected = false;
     }
 
     changeVoice(voice: string): void {
-        this.config.voice = voice;
+        this.voice = voice;
         console.log(`🔄 Voice changed to: ${voice}`);
     }
 }

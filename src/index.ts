@@ -12,6 +12,7 @@ import axios from 'axios';
 import knowledgeBaseRoutes from './routes/knowledgeBase';
 import agentRoutes from './routes/agents';
 import analyticsRoutes from './routes/analytics';
+import templatesRoutes from './routes/templates';
 
 dotenv.config();
 
@@ -82,6 +83,11 @@ fastify.register(async (instance) => {
 fastify.register(async (instance) => {
     instance.register(analyticsRoutes);
 }, { prefix: '/api/analytics' });
+
+// Register Templates API routes
+fastify.register(async (instance) => {
+    instance.register(templatesRoutes);
+}, { prefix: '/api/templates' });
 
 // API: Test Voice (Browser-based TTS using Telnyx)
 fastify.post('/api/test/voice', async (request, reply) => {

@@ -567,6 +567,16 @@ fastify.register(async (fastify) => {
 
                         browserCallLoops.set(callId, conversationLoop);
 
+                        // START THE CONVERSATION LOOP
+                        console.log('📞 Starting conversation loop...');
+                        await conversationLoop.start("Hello! I'm an AI assistant. How can I help you today?");
+                        console.log('✅ Conversation loop started');
+
+                        connection.send(JSON.stringify({
+                            type: 'started',
+                            callId
+                        }));
+
                     } else if (data.type === 'start') {
 
                         console.log(`🚀 Starting browser call conversation for ${callId}`);

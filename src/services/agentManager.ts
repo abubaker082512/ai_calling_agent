@@ -1,11 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { ConversationLoop, ConversationLoopConfig } from './conversationLoop';
 import { RAGEngine } from './ragEngine';
 
-const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_KEY || ''
-);
+function getSupabase(): SupabaseClient {
+    return createClient(
+        process.env.SUPABASE_URL || '',
+        process.env.SUPABASE_KEY || ''
+    );
+}
 
 export interface Agent {
     id: string;

@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { RAGEngine } from './ragEngine';
-
-const supabase = createClient(
-    process.env.SUPABASE_URL || '',
-    process.env.SUPABASE_KEY || ''
-);
 
 export interface KnowledgeBaseCreate {
     name: string;
@@ -32,9 +27,20 @@ export interface DocumentCreate {
  */
 export class KnowledgeBaseService {
     private ragEngine: RAGEngine;
+    private _supabase?: SupabaseClient;
 
     constructor() {
         this.ragEngine = new RAGEngine();
+    }
+
+    private get supabase(): SupabaseClient {
+        if (!this._supabase) {
+            this._supabase = createClient(
+                process.env.SUPABASE_URL || '',
+                process.env.SUPABASE_KEY || ''
+            );
+        }
+        return this._supabase;
     }
 
     /**
@@ -42,7 +48,7 @@ export class KnowledgeBaseService {
      */
     async createKnowledgeBase(data: KnowledgeBaseCreate) {
         try {
-            const { data: kb, error } = await supabase
+            const { data: kb, error } = await this.supabase
                 .from('knowledge_bases')
                 .insert({
                     user_id: data.user_id,
@@ -68,7 +74,7 @@ export class KnowledgeBaseService {
      */
     async listKnowledgeBases(userId: string) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase
                 .from('knowledge_bases')
                 .select(`
                     *,
@@ -92,7 +98,7 @@ export class KnowledgeBaseService {
      */
     async getKnowledgeBase(id: string) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase
                 .from('knowledge_bases')
                 .select(`
                     *,
@@ -116,7 +122,7 @@ export class KnowledgeBaseService {
      */
     async updateKnowledgeBase(id: string, updates: KnowledgeBaseUpdate) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase
                 .from('knowledge_bases')
                 .update(updates)
                 .eq('id', id)
@@ -139,7 +145,7 @@ export class KnowledgeBaseService {
      */
     async deleteKnowledgeBase(id: string) {
         try {
-            const { error } = await supabase
+            const { error } = await this.supabase
                 .from('knowledge_bases')
                 .delete()
                 .eq('id', id);

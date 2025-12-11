@@ -56,70 +56,37 @@ CREATE TRIGGER update_kb_documents_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Row Level Security (RLS) Policies
+-- Note: For development, we'll disable RLS or use simpler policies
+-- In production, implement proper authentication with Supabase Auth
+
 ALTER TABLE knowledge_bases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE kb_documents ENABLE ROW LEVEL SECURITY;
 
--- Policy: Users can only see their own knowledge bases
-DROP POLICY IF EXISTS "Users can view own knowledge bases" ON knowledge_bases;
-CREATE POLICY "Users can view own knowledge bases"
-    ON knowledge_bases FOR SELECT
-    USING (user_id = current_setting('app.current_user_id', TRUE));
+-- Allow all operations for now (disable in production!)
+-- Replace these with proper auth-based policies when implementing authentication
 
-DROP POLICY IF EXISTS "Users can insert own knowledge bases" ON knowledge_bases;
-CREATE POLICY "Users can insert own knowledge bases"
-    ON knowledge_bases FOR INSERT
-    WITH CHECK (user_id = current_setting('app.current_user_id', TRUE));
+DROP POLICY IF EXISTS "Enable all for knowledge_bases" ON knowledge_bases;
+CREATE POLICY "Enable all for knowledge_bases"
+    ON knowledge_bases
+    FOR ALL
+    USING (true)
+    WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Users can update own knowledge bases" ON knowledge_bases;
-CREATE POLICY "Users can update own knowledge bases"
-    ON knowledge_bases FOR UPDATE
-    USING (user_id = current_setting('app.current_user_id', TRUE));
+DROP POLICY IF EXISTS "Enable all for kb_documents" ON kb_documents;
+CREATE POLICY "Enable all for kb_documents"
+    ON kb_documents
+    FOR ALL
+    USING (true)
+    WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Users can delete own knowledge bases" ON knowledge_bases;
-CREATE POLICY "Users can delete own knowledge bases"
-    ON knowledge_bases FOR DELETE
-    USING (user_id = current_setting('app.current_user_id', TRUE));
-
--- Policy: Users can access documents from their knowledge bases
-DROP POLICY IF EXISTS "Users can view own documents" ON kb_documents;
-CREATE POLICY "Users can view own documents"
-    ON kb_documents FOR SELECT
-    USING (
-        knowledge_base_id IN (
-            SELECT id FROM knowledge_bases 
-            WHERE user_id = current_setting('app.current_user_id', TRUE)
-        )
-    );
-
-DROP POLICY IF EXISTS "Users can insert own documents" ON kb_documents;
-CREATE POLICY "Users can insert own documents"
-    ON kb_documents FOR INSERT
-    WITH CHECK (
-        knowledge_base_id IN (
-            SELECT id FROM knowledge_bases 
-            WHERE user_id = current_setting('app.current_user_id', TRUE)
-        )
-    );
-
-DROP POLICY IF EXISTS "Users can update own documents" ON kb_documents;
-CREATE POLICY "Users can update own documents"
-    ON kb_documents FOR UPDATE
-    USING (
-        knowledge_base_id IN (
-            SELECT id FROM knowledge_bases 
-            WHERE user_id = current_setting('app.current_user_id', TRUE)
-        )
-    );
-
-DROP POLICY IF EXISTS "Users can delete own documents" ON kb_documents;
-CREATE POLICY "Users can delete own documents"
-    ON kb_documents FOR DELETE
-    USING (
-        knowledge_base_id IN (
-            SELECT id FROM knowledge_bases 
-            WHERE user_id = current_setting('app.current_user_id', TRUE)
-        )
-    );
+-- TODO: In production, replace with these policies:
+-- CREATE POLICY "Users can view own knowledge bases"
+--     ON knowledge_bases FOR SELECT
+--     USING (auth.uid()::text = user_id);
+-- 
+-- CREATE POLICY "Users can insert own knowledge bases"
+--     ON knowledge_bases FOR INSERT
+--     WITH CHECK (auth.uid()::text = user_id);
 
 -- Function to search documents by similarity
 CREATE OR REPLACE FUNCTION search_documents(

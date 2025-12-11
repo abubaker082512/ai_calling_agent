@@ -26,12 +26,19 @@ async function loadKnowledgeBases() {
         if (knowledgeBases.length === 0) {
             kbList.innerHTML = `
                 <div class="empty-state">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
                     </svg>
-                    <h3>No knowledge bases yet</h3>
-                    <p>Create your first knowledge base to get started</p>
+                    <h3>No Knowledge Bases Yet</h3>
+                    <p style="color: #6b7280; margin-bottom: 20px;">Create your first knowledge base to provide context and information for your AI agents.</p>
+                    <button class="btn-primary" onclick="showCreateKBModal()" style="margin-top: 16px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Create Knowledge Base
+                    </button>
                 </div>
             `;
             return;

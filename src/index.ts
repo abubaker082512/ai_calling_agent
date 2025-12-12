@@ -89,6 +89,50 @@ fastify.register(async (instance) => {
     instance.register(templatesRoutes);
 }, { prefix: '/api/templates' });
 
+// Health check endpoint for debugging
+fastify.get('/api/health', async (request, reply) => {
+    const health = {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: {
+            nodeEnv: process.env.NODE_ENV,
+            port: process.env.PORT,
+            hasSupabaseUrl: !!process.env.SUPABASE_URL,
+            hasSupabaseKey: !!process.env.SUPABASE_KEY,
+            hasGeminiKey: !!process.env.GEMINI_API_KEY,
+            hasDeepgramKey: !!process.env.DEEPGRAM_API_KEY,
+            hasTelnyxKey: !!process.env.TELNYX_API_KEY
+        },
+        services: {
+            stats: 'ok',
+            agents: 'unknown',
+            knowledgeBases: 'unknown'
+        }
+    };
+
+    // Test agents service
+    try {
+        const { AgentManager } = await import('./services/agentManager');
+        const agentManager = new AgentManager();
+        await agentManager.listAgents('health-check');
+        health.services.agents = 'ok';
+    } catch (error: any) {
+        health.services.agents = error.message;
+    }
+
+    // Test knowledge base service
+    try {
+        const { KnowledgeBaseService } = await import('./services/knowledgeBase');
+        const kbService = new KnowledgeBaseService();
+        await kbService.listKnowledgeBases('health-check');
+        health.services.knowledgeBases = 'ok';
+    } catch (error: any) {
+        health.services.knowledgeBases = error.message;
+    }
+
+    return health;
+});
+
 // API: Test Voice (Browser-based TTS using Telnyx)
 fastify.post('/api/test/voice', async (request, reply) => {
     try {

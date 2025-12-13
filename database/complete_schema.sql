@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS knowledge_bases (
 -- Knowledge Base Documents Table
 CREATE TABLE IF NOT EXISTS kb_documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    kb_id UUID REFERENCES knowledge_bases(id) ON DELETE CASCADE,
+    knowledge_base_id UUID REFERENCES knowledge_bases(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     embedding vector(1536),
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS kb_documents (
 CREATE INDEX IF NOT EXISTS idx_kb_created ON knowledge_bases(created_at DESC);
 
 -- Indexes for kb_documents
-CREATE INDEX IF NOT EXISTS idx_kb_docs_kb ON kb_documents(kb_id);
+CREATE INDEX IF NOT EXISTS idx_kb_docs_kb ON kb_documents(knowledge_base_id);
 CREATE INDEX IF NOT EXISTS idx_kb_docs_embedding ON kb_documents USING ivfflat (embedding vector_cosine_ops);
 
 -- Triggers for knowledge_bases

@@ -1,5 +1,5 @@
 // Cost Calculation Service
-import { getSupabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export interface CallCost {
     llmCost: number;
@@ -18,6 +18,18 @@ export interface CostBreakdown {
     totalCost: number;
     totalCalls: number;
     totalMinutes: number;
+}
+
+// Helper function to get Supabase client
+function getSupabase() {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase credentials not configured');
+    }
+
+    return createClient(supabaseUrl, supabaseKey);
 }
 
 export class CostService {

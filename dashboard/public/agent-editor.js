@@ -85,6 +85,12 @@ async function loadAgent(agentId) {
         document.getElementById('transcriptionEnabled').checked = settings.transcriptionEnabled !== false;
         document.getElementById('webhookUrl').value = settings.webhookUrl || '';
 
+        // Voice controls
+        document.getElementById('voiceSpeed').value = settings.voiceSpeed || 1.0;
+        document.getElementById('voicePitch').value = settings.voicePitch || 0;
+        updateVoiceSpeedLabel(settings.voiceSpeed || 1.0);
+        updateVoicePitchLabel(settings.voicePitch || 0);
+
     } catch (error) {
         console.error('Error loading agent:', error);
         alert('Failed to load agent');
@@ -116,7 +122,9 @@ async function saveAgent() {
                 webhookUrl: document.getElementById('webhookUrl').value,
                 model: 'gemini-2.5-flash',
                 language: 'en',
-                endCallPhrases: ['goodbye', 'bye', 'thank you']
+                endCallPhrases: ['goodbye', 'bye', 'thank you'],
+                voiceSpeed: parseFloat(document.getElementById('voiceSpeed').value),
+                voicePitch: parseInt(document.getElementById('voicePitch').value)
             }
         };
 
@@ -256,3 +264,87 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Voice control functions
+function updateVoiceSpeedLabel(value) {
+    document.getElementById('voiceSpeedValue').textContent = parseFloat(value).toFixed(1) + 'x';
+}
+
+function updateVoicePitchLabel(value) {
+    const pitchValue = parseInt(value);
+    document.getElementById('voicePitchValue').textContent = pitchValue > 0 ? '+' + pitchValue : pitchValue;
+}
+
+// Preview voice function
+async function previewVoice() {
+    const voice = document.getElementById('voiceSelect').value;
+    const speed = parseFloat(document.getElementById('voiceSpeed').value);
+    const pitch = parseInt(document.getElementById('voicePitch').value);
+
+    const previewText = document.getElementById('greeting').value || 'Hello! This is a preview of the selected voice.';
+
+    try {
+        // Show loading state
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle; animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>Generating...';
+        button.disabled = true;
+
+        // Call TTS API to generate preview
+        const response = await fetch(`${API_URL}/api/tts/preview`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                text: previewText,
+                voice: voice,
+                speed: speed,
+                pitch: pitch
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to generate voice preview');
+        }
+
+        // Get audio blob and play it
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+
+        audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            button.innerHTML = originalText;
+            button.disabled = false;
+        };
+
+        audio.onerror = () => {
+            URL.revokeObjectURL(audioUrl);
+            button.innerHTML = originalText;
+            button.disabled = false;
+            showNotification('Failed to play audio preview', 'error');
+        };
+
+        await audio.play();
+
+    } catch (error) {
+        console.error('Error previewing voice:', error);
+        showNotification('Failed to preview voice. Feature coming soon!', 'error');
+
+        // Reset button
+        const button = event.target.closest('button');
+        button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>Preview Voice';
+        button.disabled = false;
+    }
+}
+
+// Add spin animation for loading state
+const spinStyle = document.createElement('style');
+spinStyle.textContent = `
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(spinStyle);

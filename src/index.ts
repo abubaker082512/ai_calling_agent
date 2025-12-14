@@ -14,6 +14,7 @@ import agentRoutes from './routes/agents';
 import analyticsRoutes from './routes/analytics';
 import templatesRoutes from './routes/templates';
 import telnyxWebhookRoutes from './routes/telnyxWebhooks';
+import mediaWebSocketRoutes from './routes/mediaWebSocket';
 
 dotenv.config();
 
@@ -92,6 +93,9 @@ fastify.register(async (instance) => {
 
 // Register Telnyx Webhook routes
 fastify.register(telnyxWebhookRoutes);
+
+// Register Media WebSocket routes (Phase 2)
+fastify.register(mediaWebSocketRoutes);
 
 // Health check endpoint for debugging
 fastify.get('/api/health', async (request, reply) => {

@@ -208,9 +208,10 @@ export default async function telnyxWebhookRoutes(fastify: FastifyInstance) {
     fastify.get('/telnyx/events/test', async (request: FastifyRequest, reply: FastifyReply) => {
         return {
             status: 'ok',
-            message: 'Telnyx webhook receiver is ready (Phase 1.5)',
+            message: 'Telnyx webhook receiver is ready (Phase 2 - AI Voice Loop)',
             endpoint: '/telnyx/events',
-            orchestrator: 'CallOrchestrator',
+            orchestrator: 'CallOrchestratorWithAI',
+            features: ['STT', 'DialogueManager', 'TTS', 'Voice Loop'],
             timestamp: new Date().toISOString()
         };
     });

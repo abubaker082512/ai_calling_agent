@@ -4,7 +4,9 @@
     box-sizing: border-box;
 }
 
-:root {
+/* Dark Theme (Default) */
+:root,
+[data-theme="dark"] {
     --bg-primary: #0a0a0a;
     --bg-secondary: #141414;
     --bg-tertiary: #1a1a1a;
@@ -15,7 +17,28 @@
     --accent-hover: #2563eb;
     --border: #2a2a2a;
     --success: #10b981;
+    --error: #ef4444;
+    --warning: #f59e0b;
     --sidebar-width: 240px;
+    --primary: #8b5cf6;
+}
+
+/* Light Theme */
+[data-theme="light"] {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --bg-tertiary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --border: #e5e7eb;
+    --success: #10b981;
+    --error: #ef4444;
+    --warning: #f59e0b;
+    --sidebar-width: 240px;
+    --primary: #8b5cf6;
 }
 
 body {
@@ -154,6 +177,35 @@ body {
 .workspace {
     font-size: 12px;
     color: var(--text-tertiary);
+}
+
+/* Theme Toggle */
+.theme-toggle {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.theme-toggle:hover {
+    background: var(--bg-primary);
+    border-color: var(--accent);
+}
+
+.theme-toggle svg {
+    transition: transform 0.3s;
+}
+
+.theme-toggle:hover svg {
+    transform: rotate(20deg);
 }
 
 /* Main Content */

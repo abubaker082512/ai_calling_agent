@@ -1,13 +1,15 @@
 /**
- * Telnyx Webhook Receiver
+ * Telnyx Webhook Receiver (Refactored for Phase 1.5)
  * Handles incoming webhooks from Telnyx
- * Validates signatures and logs all events
- * Stores call data in database
+ * Delegates to CallOrchestrator for all call lifecycle management
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import crypto from 'crypto';
 import { SupabaseService } from '../services/supabase';
+import { CallOrchestrator } from '../core/CallOrchestrator.refactored';
+import { TelnyxCallService } from '../services/TelnyxCallService';
+import { CallSessionManager } from '../managers/CallSessionManager';
 
 interface TelnyxWebhookPayload {
     data: {
@@ -38,6 +40,13 @@ interface TelnyxWebhookPayload {
 
 export default async function telnyxWebhookRoutes(fastify: FastifyInstance) {
     const supabase = new SupabaseService();
+
+    // Initialize services
+    const telnyxService = new TelnyxCallService();
+    const sessionManager = new CallSessionManager();
+    const callOrchestrator = new CallOrchestrator(telnyxService, sessionManager);
+
+    console.log('✅ Telnyx webhook routes initialized with CallOrchestrator');
 
     /**
      * Validate Telnyx webhook signature
@@ -103,88 +112,8 @@ export default async function telnyxWebhookRoutes(fastify: FastifyInstance) {
     }
 
     /**
-     * Handle call.initiated event
-     */
-    async function handleCallInitiated(payload: any): Promise<void> {
-        console.log(`📞 Call Initiated: ${payload.call_control_id}`);
-        console.log(`   From: ${payload.from}`);
-        console.log(`   To: ${payload.to}`);
-        console.log(`   Direction: ${payload.direction}`);
-
-        // Store in database
-        try {
-            await supabase.client
-                .from('calls')
-                .insert({
-                    call_control_id: payload.call_control_id,
-                    call_session_id: payload.call_session_id,
-                    from_number: payload.from,
-                    to_number: payload.to,
-                    direction: payload.direction,
-                    status: 'initiated',
-                    started_at: new Date(),
-                    created_at: new Date()
-                });
-
-            console.log(`✅ Call record created: ${payload.call_control_id}`);
-        } catch (error) {
-            console.error('❌ Error creating call record:', error);
-        }
-    }
-
-    /**
-     * Handle call.answered event
-     */
-    async function handleCallAnswered(payload: any): Promise<void> {
-        console.log(`✅ Call Answered: ${payload.call_control_id}`);
-
-        // Update call status
-        try {
-            await supabase.client
-                .from('calls')
-                .update({
-                    status: 'answered',
-                    answered_at: new Date(),
-                    updated_at: new Date()
-                })
-                .eq('call_control_id', payload.call_control_id);
-
-            console.log(`✅ Call status updated: ${payload.call_control_id}`);
-        } catch (error) {
-            console.error('❌ Error updating call status:', error);
-        }
-    }
-
-    /**
-     * Handle call.hangup event
-     */
-    async function handleCallHangup(payload: any): Promise<void> {
-        console.log(`📴 Call Hangup: ${payload.call_control_id}`);
-        console.log(`   Cause: ${payload.hangup_cause}`);
-        console.log(`   Source: ${payload.hangup_source}`);
-
-        // Update call status
-        try {
-            await supabase.client
-                .from('calls')
-                .update({
-                    status: 'ended',
-                    hangup_cause: payload.hangup_cause,
-                    hangup_source: payload.hangup_source,
-                    ended_at: new Date(),
-                    updated_at: new Date()
-                })
-                .eq('call_control_id', payload.call_control_id);
-
-            console.log(`✅ Call ended: ${payload.call_control_id}`);
-        } catch (error) {
-            console.error('❌ Error updating call end:', error);
-        }
-    }
-
-    /**
      * POST /telnyx/events
-     * Main webhook endpoint
+     * Main webhook endpoint - delegates to CallOrchestrator
      */
     fastify.post('/telnyx/events', async (request: FastifyRequest, reply: FastifyReply) => {
         try {
@@ -210,21 +139,33 @@ export default async function telnyxWebhookRoutes(fastify: FastifyInstance) {
             console.log(`   Call ID: ${eventPayload.call_control_id}`);
             console.log(`   Timestamp: ${event.data.occurred_at}`);
 
-            // Store event
+            // Store event in database
             await storeCallEvent(event);
 
-            // Handle specific events
+            // Delegate to CallOrchestrator
             switch (event_type) {
                 case 'call.initiated':
-                    await handleCallInitiated(eventPayload);
+                    console.log(`📞 Call Initiated → CallOrchestrator`);
+                    await callOrchestrator.handleInboundCall({
+                        call_control_id: eventPayload.call_control_id,
+                        call_session_id: eventPayload.call_session_id,
+                        from: eventPayload.from || '',
+                        to: eventPayload.to || ''
+                    });
                     break;
 
                 case 'call.answered':
-                    await handleCallAnswered(eventPayload);
+                    console.log(`✅ Call Answered → CallOrchestrator`);
+                    await callOrchestrator.handleCallAnswered(eventPayload.call_control_id);
                     break;
 
                 case 'call.hangup':
-                    await handleCallHangup(eventPayload);
+                    console.log(`📴 Call Hangup → CallOrchestrator`);
+                    await callOrchestrator.handleCallHangup(
+                        eventPayload.call_control_id,
+                        eventPayload.hangup_cause,
+                        eventPayload.hangup_source
+                    );
                     break;
 
                 case 'call.speak.started':
@@ -267,8 +208,9 @@ export default async function telnyxWebhookRoutes(fastify: FastifyInstance) {
     fastify.get('/telnyx/events/test', async (request: FastifyRequest, reply: FastifyReply) => {
         return {
             status: 'ok',
-            message: 'Telnyx webhook receiver is ready',
+            message: 'Telnyx webhook receiver is ready (Phase 1.5)',
             endpoint: '/telnyx/events',
+            orchestrator: 'CallOrchestrator',
             timestamp: new Date().toISOString()
         };
     });

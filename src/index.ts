@@ -13,6 +13,7 @@ import knowledgeBaseRoutes from './routes/knowledgeBase';
 import agentRoutes from './routes/agents';
 import analyticsRoutes from './routes/analytics';
 import templatesRoutes from './routes/templates';
+import telnyxWebhookRoutes from './routes/telnyxWebhooks';
 
 dotenv.config();
 
@@ -88,6 +89,9 @@ fastify.register(async (instance) => {
 fastify.register(async (instance) => {
     instance.register(templatesRoutes);
 }, { prefix: '/api/templates' });
+
+// Register Telnyx Webhook routes
+fastify.register(telnyxWebhookRoutes);
 
 // Health check endpoint for debugging
 fastify.get('/api/health', async (request, reply) => {

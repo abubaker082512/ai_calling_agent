@@ -1,7 +1,7 @@
 /**
- * Call Orchestrator with Full AI Voice Loop (Phase 2)
- * Integrates: STT → DialogueManager → TTS
- * Complete AI conversation flow
+ * Call Orchestrator with Full AI Voice Loop (Phase 3)
+ * Integrates: STT → TelnyxConversationalAI (LLM) → TTS
+ * Complete AI conversation flow with intelligent responses
  */
 
 import { EventEmitter } from 'events';
@@ -9,7 +9,7 @@ import { TelnyxCallService } from '../services/TelnyxCallService';
 import { CallSessionManager } from '../managers/CallSessionManager';
 import { TelnyxSTTService } from '../services/TelnyxSTTService';
 import { TelnyxTTSService } from '../services/TelnyxTTSService';
-import { DialogueManager, DialogueInput } from '../managers/DialogueManager';
+import { TelnyxConversationalAIService, AIConfig } from '../services/TelnyxConversationalAIService';
 import { CallSession, CallSessionState } from '../models/CallSession';
 import { TranscriptEvent } from '../services/TelnyxSTTService';
 
@@ -39,7 +39,7 @@ export class CallOrchestratorWithAI extends EventEmitter {
     private sessionManager: CallSessionManager;
     private sttService: TelnyxSTTService;
     private ttsService: TelnyxTTSService;
-    private dialogueManager: DialogueManager;
+    private conversationalAI: TelnyxConversationalAIService;
 
     private silenceTimers: Map<string, NodeJS.Timeout> = new Map();
 
@@ -47,19 +47,20 @@ export class CallOrchestratorWithAI extends EventEmitter {
         telnyxService: TelnyxCallService,
         sessionManager: CallSessionManager,
         sttService: TelnyxSTTService,
-        ttsService: TelnyxTTSService
+        ttsService: TelnyxTTSService,
+        conversationalAI: TelnyxConversationalAIService
     ) {
         super();
         this.telnyxService = telnyxService;
         this.sessionManager = sessionManager;
         this.sttService = sttService;
         this.ttsService = ttsService;
-        this.dialogueManager = new DialogueManager();
+        this.conversationalAI = conversationalAI;
 
         // Listen to STT events
         this.setupSTTListeners();
 
-        console.log('✅ CallOrchestratorWithAI initialized');
+        console.log('✅ CallOrchestratorWithAI initialized (Phase 3)');
     }
 
     /**
@@ -142,11 +143,26 @@ export class CallOrchestratorWithAI extends EventEmitter {
         console.log(`🤖 Starting AI voice loop: ${callControlId}`);
 
         try {
-            // Speak greeting
-            await this.ttsService.speak(
+            // Enable AI with configuration
+            const aiConfig: AIConfig = {
+                model: 'gpt-3.5-turbo',
+                prompt: 'You are a helpful and friendly customer service agent. Be concise and professional.',
+                voice: 'female',
+                language: 'en-US',
+                temperature: 0.7
+            };
+
+            await this.conversationalAI.enableAI(callControlId, aiConfig);
+
+            // Get AI greeting
+            const greeting = await this.conversationalAI.processUserInput(
                 callControlId,
-                VOICE_LOOP_CONFIG.GREETING_TEXT
+                'Hello',
+                1.0
             );
+
+            // Speak greeting
+            await this.ttsService.speak(callControlId, greeting);
 
             // Start silence timer
             this.startSilenceTimer(callControlId);
@@ -176,20 +192,48 @@ export class CallOrchestratorWithAI extends EventEmitter {
             // Reset silence timer
             this.resetSilenceTimer(event.callControlId);
 
-            // Prepare dialogue input
-            const dialogueInput: DialogueInput = {
-                transcript: event.text,
-                confidence: event.confidence,
-                sessionState: session.state,
-                retryCount: session.retry_count,
-                confidenceFailures: session.confidence_failures
-            };
+            // Check confidence threshold
+            if (event.confidence < VOICE_LOOP_CONFIG.CONFIDENCE_THRESHOLD) {
+                await this.sessionManager.incrementRetry(event.callControlId);
 
-            // Get dialogue decision
-            const dialogueOutput = this.dialogueManager.processInput(dialogueInput);
+                if (session.retry_count >= VOICE_LOOP_CONFIG.MAX_RETRIES) {
+                    await this.escalateToHuman(event.callControlId);
+                    return;
+                }
 
-            // Execute action
-            await this.executeDialogueAction(event.callControlId, dialogueOutput, session);
+                await this.ttsService.speak(
+                    event.callControlId,
+                    "I'm sorry, I didn't catch that. Could you please repeat?"
+                );
+                this.startSilenceTimer(event.callControlId);
+                return;
+            }
+
+            // Get AI response
+            const aiResponse = await this.conversationalAI.processUserInput(
+                event.callControlId,
+                event.text,
+                event.confidence
+            );
+
+            // Check for goodbye/end keywords
+            if (this.shouldEndCall(event.text)) {
+                await this.ttsService.speak(event.callControlId, aiResponse);
+                setTimeout(async () => {
+                    await this.telnyxService.hangupCall(event.callControlId);
+                }, 3000);
+                return;
+            }
+
+            // Check for escalation keywords
+            if (this.shouldEscalate(event.text)) {
+                await this.escalateToHuman(event.callControlId);
+                return;
+            }
+
+            // Speak AI response
+            await this.ttsService.speak(event.callControlId, aiResponse);
+            this.startSilenceTimer(event.callControlId);
 
         } catch (error: any) {
             console.error(`❌ Error handling transcript:`, error);
@@ -197,46 +241,25 @@ export class CallOrchestratorWithAI extends EventEmitter {
     }
 
     /**
-     * Execute dialogue action
+     * Check if should end call
      */
-    private async executeDialogueAction(
-        callControlId: string,
-        output: any,
-        session: CallSession
-    ): Promise<void> {
-        console.log(`\n🎬 Executing action: ${output.action}`);
+    private shouldEndCall(transcript: string): boolean {
+        const endKeywords = ['bye', 'goodbye', 'see you', 'have a good', 'take care'];
+        const lower = transcript.toLowerCase();
+        return endKeywords.some(keyword => lower.includes(keyword));
+    }
 
-        switch (output.action) {
-            case 'SPEAK':
-                await this.ttsService.speak(callControlId, output.responseText);
-                this.startSilenceTimer(callControlId);
-                break;
-
-            case 'REPEAT':
-                if (output.incrementRetry) {
-                    await this.sessionManager.incrementRetry(callControlId);
-                }
-                await this.ttsService.speak(callControlId, output.responseText);
-                this.startSilenceTimer(callControlId);
-                break;
-
-            case 'ESCALATE':
-                await this.escalateToHuman(callControlId);
-                break;
-
-            case 'END':
-                await this.ttsService.speak(callControlId, output.responseText);
-                // Wait for speech to finish, then hangup
-                setTimeout(async () => {
-                    await this.telnyxService.hangupCall(callControlId);
-                }, 3000);
-                break;
-        }
-
-        // Update state if needed
-        if (output.shouldUpdateState) {
-            await this.sessionManager.updateState(callControlId, output.shouldUpdateState);
-        }
+    /**
+     * Check if should escalate
+     */
+    private shouldEscalate(transcript: string): boolean {
+        const escalationKeywords = [
+            'human', 'agent', 'representative', 'person',
+            'speak to someone', 'talk to someone',
+            'transfer', 'supervisor', 'manager'
+        ];
+        const lower = transcript.toLowerCase();
+        return escalationKeywords.some(keyword => lower.includes(keyword));
     }
 
     /**
@@ -402,10 +425,13 @@ export class CallOrchestratorWithAI extends EventEmitter {
             const session = await this.sessionManager.getSession(callControlId);
             this.emit('call:escalated', { session });
 
+            // Disable AI
+            await this.conversationalAI.disableAI(callControlId);
+
             // Speak escalation message
             await this.ttsService.speak(
                 callControlId,
-                DialogueManager.getErrorMessage()
+                "I understand you need assistance. Let me transfer you to a human agent who can better help you."
             );
 
             console.log(`✅ Call escalated: ${callControlId}`);

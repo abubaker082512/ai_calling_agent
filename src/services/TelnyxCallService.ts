@@ -31,11 +31,15 @@ export class TelnyxCallService {
         this.connectionId = process.env.TELNYX_CONNECTION_ID || '';
 
         if (!this.apiKey) {
-            throw new Error('TELNYX_API_KEY is required');
+            console.warn('⚠️ TELNYX_API_KEY not set - Telnyx service will not work');
+            console.warn('   Using Dexatel as primary provider');
+            return;
         }
 
         if (!this.connectionId) {
-            throw new Error('TELNYX_CONNECTION_ID is required');
+            console.warn('⚠️ TELNYX_CONNECTION_ID not set - Telnyx service will not work');
+            console.warn('   Using Dexatel as primary provider');
+            return;
         }
 
         // Initialize Telnyx client

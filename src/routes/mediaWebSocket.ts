@@ -20,7 +20,8 @@ export default async function mediaWebSocketRoutes(fastify: FastifyInstance) {
      * URL: wss://domain.com/media/stream
      */
     fastify.get('/media/stream', { websocket: true }, (connection, request) => {
-        const ws = connection.socket as WebSocket;
+        // Type cast the connection to WebSocket
+        const ws = connection as any as WebSocket;
 
         // Extract call_control_id from query params
         const callControlId = (request.query as any).call_control_id;

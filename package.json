@@ -6,7 +6,9 @@
   "scripts": {
     "build": "tsc && node -e \"require('fs').copyFileSync('src/services/conversationEngine.js', 'dist/services/conversationEngine.js')\"",
     "start": "node dist/index.js",
-    "dev": "nodemon src/index.ts"
+    "dev": "nodemon src/index.ts",
+    "test:supabase": "ts-node scripts/test-supabase.ts",
+    "setup:supabase": "ts-node scripts/setup-supabase.ts"
   },
   "keywords": [],
   "author": "",

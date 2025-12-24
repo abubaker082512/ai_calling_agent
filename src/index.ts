@@ -14,6 +14,7 @@ import agentRoutes from './routes/agents';
 import analyticsRoutes from './routes/analytics';
 import templatesRoutes from './routes/templates';
 import telnyxWebhookRoutes from './routes/telnyxWebhooks';
+import dexatelWebhookRoutes from './routes/dexatelWebhooks';
 import mediaWebSocketRoutes from './routes/mediaWebSocket';
 
 dotenv.config();
@@ -91,8 +92,11 @@ fastify.register(async (instance) => {
     instance.register(templatesRoutes);
 }, { prefix: '/api/templates' });
 
-// Register Telnyx Webhook routes
+// Register Telnyx Webhook routes (legacy - for backward compatibility)
 fastify.register(telnyxWebhookRoutes);
+
+// Register Dexatel Webhook routes (new provider)
+fastify.register(dexatelWebhookRoutes);
 
 // Register Media WebSocket routes (Phase 2)
 fastify.register(mediaWebSocketRoutes);

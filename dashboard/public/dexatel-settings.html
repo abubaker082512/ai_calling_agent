@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dexatel Settings - AI Calling Agent</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .settings-section {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .settings-section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .save-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .save-btn:hover {
+            background: #45a049;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-indicator.active {
+            background: #4CAF50;
+        }
+
+        .status-indicator.inactive {
+            background: #dc3545;
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="navigation"></div>
+
+    <div class="settings-container">
+        <h1>⚙️ Dexatel Settings</h1>
+
+        <!-- API Configuration -->
+        <div class="settings-section">
+            <h2>API Configuration</h2>
+
+            <div class="form-group">
+                <label>API Key Status</label>
+                <div>
+                    <span class="status-indicator" id="apiStatus"></span>
+                    <span id="apiStatusText">Checking...</span>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <strong>ℹ️ Note:</strong> API key is configured in your .env file.
+                To change it, update <code>DEXATEL_API_KEY</code> in your environment variables.
+            </div>
+
+            <div class="form-group">
+                <label for="apiKey">API Key (Read-only)</label>
+                <input type="password" id="apiKey" value="51050c33778001c2d22df1d722750026" readonly>
+                <small>Configured in environment variables</small>
+            </div>
+        </div>
+
+        <!-- Call Settings -->
+        <div class="settings-section">
+            <h2>Call Settings</h2>
+
+            <div class="form-group">
+                <label for="defaultCallerID">Default Caller ID</label>
+                <input type="tel" id="defaultCallerID" placeholder="+1234567890">
+                <small>Default number to use for outbound calls (optional)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="webhookUrl">Webhook URL</label>
+                <input type="url" id="webhookUrl" value="" readonly>
+                <small>Automatically configured based on your domain</small>
+            </div>
+
+            <div class="form-group">
+                <label for="streamUrl">Stream URL</label>
+                <input type="url" id="streamUrl" value="" readonly>
+                <small>WebSocket URL for audio streaming</small>
+            </div>
+        </div>
+
+        <!-- Voice Settings -->
+        <div class="settings-section">
+            <h2>Voice Settings</h2>
+
+            <div class="form-group">
+                <label for="defaultVoice">Default Voice</label>
+                <select id="defaultVoice">
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                </select>
+                <small>Default voice for text-to-speech</small>
+            </div>
+
+            <div class="form-group">
+                <label for="defaultLanguage">Default Language</label>
+                <select id="defaultLanguage">
+                    <option value="en-US">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="es-ES">Spanish</option>
+                    <option value="fr-FR">French</option>
+                    <option value="de-DE">German</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Advanced Settings -->
+        <div class="settings-section">
+            <h2>Advanced Settings</h2>
+
+            <div class="form-group">
+                <label for="maxCallDuration">Max Call Duration (seconds)</label>
+                <input type="number" id="maxCallDuration" value="3600" min="60" max="7200">
+                <small>Maximum duration for a single call (60-7200 seconds)</small>
+            </div>
+
+            <div class="form-group">
+                <label for="autoRetry">Auto Retry Failed Calls</label>
+                <select id="autoRetry">
+                    <option value="false">Disabled</option>
+                    <option value="true">Enabled</option>
+                </select>
+                <small>Automatically retry failed calls</small>
+            </div>
+
+            <div class="form-group">
+                <label for="retryAttempts">Retry Attempts</label>
+                <input type="number" id="retryAttempts" value="3" min="1" max="5">
+                <small>Number of retry attempts for failed calls</small>
+            </div>
+        </div>
+
+        <!-- Voice API Activation -->
+        <div class="settings-section">
+            <h2>Voice API Activation</h2>
+
+            <div class="warning-box">
+                <strong>⚠️ Important:</strong> Dexatel Voice API requires activation.
+                <br><br>
+                <strong>Contact Dexatel Support:</strong>
+                <ul>
+                    <li>Email: <a href="mailto:[email protected]">[email protected]</a></li>
+                    <li>Subject: "Activate Voice API"</li>
+                    <li>Message: "Please activate Voice API for my account"</li>
+                </ul>
+            </div>
+
+            <button class="save-btn" onclick="testVoiceAPI()">Test Voice API</button>
+        </div>
+
+        <button class="save-btn" onclick="saveSettings()">💾 Save Settings</button>
+    </div>
+
+    <script src="nav-component.js"></script>
+    <script>
+        async function checkApiStatus() {
+            try {
+                const response = await fetch('/api/dexatel/status');
+                const data = await response.json();
+
+                const statusIndicator = document.getElementById('apiStatus');
+                const statusText = document.getElementById('apiStatusText');
+
+                if (data.success && data.configured) {
+                    statusIndicator.className = 'status-indicator active';
+                    statusText.textContent = 'Active & Configured';
+                } else {
+                    statusIndicator.className = 'status-indicator inactive';
+                    statusText.textContent = 'Not Configured';
+                }
+            } catch (error) {
+                document.getElementById('apiStatus').className = 'status-indicator inactive';
+                document.getElementById('apiStatusText').textContent = 'Error';
+            }
+        }
+
+        function loadSettings() {
+            // Load from localStorage
+            const settings = JSON.parse(localStorage.getItem('dexatelSettings') || '{}');
+
+            document.getElementById('defaultCallerID').value = settings.defaultCallerID || '';
+            document.getElementById('defaultVoice').value = settings.defaultVoice || 'female';
+            document.getElementById('defaultLanguage').value = settings.defaultLanguage || 'en-US';
+            document.getElementById('maxCallDuration').value = settings.maxCallDuration || 3600;
+            document.getElementById('autoRetry').value = settings.autoRetry || 'false';
+            document.getElementById('retryAttempts').value = settings.retryAttempts || 3;
+
+            // Set URLs
+            const domain = window.location.origin;
+            document.getElementById('webhookUrl').value = `${domain}/dexatel/events`;
+            document.getElementById('streamUrl').value = `wss://${window.location.host}/media/stream`;
+        }
+
+        function saveSettings() {
+            const settings = {
+                defaultCallerID: document.getElementById('defaultCallerID').value,
+                defaultVoice: document.getElementById('defaultVoice').value,
+                defaultLanguage: document.getElementById('defaultLanguage').value,
+                maxCallDuration: parseInt(document.getElementById('maxCallDuration').value),
+                autoRetry: document.getElementById('autoRetry').value === 'true',
+                retryAttempts: parseInt(document.getElementById('retryAttempts').value)
+            };
+
+            localStorage.setItem('dexatelSettings', JSON.stringify(settings));
+            alert('✅ Settings saved successfully!');
+        }
+
+        async function testVoiceAPI() {
+            try {
+                const response = await fetch('/api/dexatel/balance');
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Voice API is active!\n\nBalance: ' + JSON.stringify(data.balance, null, 2));
+                } else {
+                    alert('❌ Voice API not activated\n\nError: ' + data.message + '\n\nPlease contact Dexatel support.');
+                }
+            } catch (error) {
+                alert('❌ Error testing Voice API: ' + error.message);
+            }
+        }
+
+        window.addEventListener('load', () => {
+            checkApiStatus();
+            loadSettings();
+        });
+    </script>
+</body>
+
+</html>

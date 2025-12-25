@@ -92,6 +92,12 @@ fastify.register(async (instance) => {
     instance.register(templatesRoutes);
 }, { prefix: '/api/templates' });
 
+// Register Dexatel API routes
+import dexatelApiRoutes from './routes/dexatelApi';
+fastify.register(async (instance) => {
+    instance.register(dexatelApiRoutes);
+}, { prefix: '/api/dexatel' });
+
 // Register Telnyx Webhook routes (legacy - for backward compatibility)
 fastify.register(telnyxWebhookRoutes);
 

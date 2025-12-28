@@ -86,8 +86,21 @@ export class DexatelSMSService {
             };
 
         } catch (error: any) {
-            console.error(`❌ Error sending SMS:`, error.response?.data || error.message);
-            throw new Error(`Failed to send SMS: ${error.response?.data?.message || error.message}`);
+            console.error(`❌ Error sending SMS - Full details:`);
+            console.error('Status:', error.response?.status);
+            console.error('Status Text:', error.response?.statusText);
+            console.error('Response Data:', JSON.stringify(error.response?.data, null, 2));
+            console.error('Request Payload:', JSON.stringify({
+                data: {
+                    channel: 'SMS',
+                    to: message.to,
+                    text: message.text,
+                    sender: message.from || this.defaultSender
+                }
+            }, null, 2));
+
+            const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message;
+            throw new Error(`Failed to send SMS: ${errorMsg}`);
         }
     }
 

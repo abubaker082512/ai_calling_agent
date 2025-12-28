@@ -52,14 +52,19 @@ export class DexatelSMSService {
 
             console.log(`📱 Sending SMS to: ${message.to}`);
 
+            const payload = {
+                data: {
+                    to: message.to,
+                    text: message.text,
+                    sender: message.from || this.defaultSender
+                }
+            };
+
+            console.log('📤 Payload:', JSON.stringify(payload, null, 2));
+
             const response = await axios.post(
                 `${this.baseUrl}/messages`,
-                {
-                    to: [message.to],
-                    text: message.text,
-                    from: message.from || this.defaultSender,
-                    channel: 'sms'
-                },
+                payload,
                 {
                     headers: {
                         'X-Dexatel-Key': this.apiKey,
@@ -95,32 +100,29 @@ export class DexatelSMSService {
 
             console.log(`📱 Sending bulk SMS to ${message.to.length} recipients`);
 
-            const response = await axios.post(
-                `${this.baseUrl}/messages`,
-                {
-                    to: message.to,
-                    text: message.text,
-                    from: message.from || this.defaultSender,
-                    channel: 'sms'
-                },
-                {
-                    headers: {
-                        'X-Dexatel-Key': this.apiKey,
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
+            // Send individual SMS for each recipient
+            const results: SMSResponse[] = [];
+
+            for (const recipient of message.to) {
+                try {
+                    const result = await this.sendSMS({
+                        to: recipient,
+                        text: message.text,
+                        from: message.from
+                    });
+                    results.push(result);
+                } catch (error) {
+                    console.error(`Failed to send to ${recipient}:`, error);
+                    results.push({
+                        message_id: `failed-${recipient}`,
+                        status: 'failed',
+                        to: recipient,
+                        cost: 0
+                    });
                 }
-            );
+            }
 
-            console.log(`✅ Bulk SMS sent: ${response.data.id}`);
-
-            // Return array of responses for each recipient
-            return message.to.map((recipient, index) => ({
-                message_id: `${response.data.id}-${index}`,
-                status: response.data.status,
-                to: recipient,
-                cost: response.data.cost ? response.data.cost / message.to.length : 0
-            }));
+            return results;
 
         } catch (error: any) {
             console.error(`❌ Error sending bulk SMS:`, error.response?.data || error.message);

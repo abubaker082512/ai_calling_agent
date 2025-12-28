@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send SMS - AI Calling Agent</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .sms-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .sms-form {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .char-counter {
+            text-align: right;
+            color: #666;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .send-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        .send-btn:hover {
+            background: #45a049;
+        }
+
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .result-box.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result-box.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .cost-estimate {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .recent-sms {
+            margin-top: 40px;
+        }
+
+        .sms-list {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .sms-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .sms-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status-sent {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-delivered {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="navigation"></div>
+
+    <div class="sms-container">
+        <h1>📱 Send SMS</h1>
+
+        <div class="sms-form">
+            <div class="form-group">
+                <label for="phoneNumber">Phone Number (E.164 format)</label>
+                <input type="tel" id="phoneNumber" placeholder="+923185954599" required>
+                <small>Format: +[country code][number]</small>
+            </div>
+
+            <div class="form-group">
+                <label for="message">Message</label>
+                <textarea id="message" placeholder="Enter your message here..." required></textarea>
+                <div class="char-counter">
+                    <span id="charCount">0</span> / 160 characters
+                    (<span id="smsCount">1</span> SMS)
+                </div>
+            </div>
+
+            <div class="cost-estimate" id="costEstimate" style="display: none;">
+                <strong>💰 Cost Estimate:</strong> $<span id="estimatedCost">0.00</span>
+            </div>
+
+            <button class="send-btn" id="sendBtn" onclick="sendSMS()">📤 Send SMS</button>
+
+            <div id="result"></div>
+        </div>
+
+        <div class="recent-sms">
+            <h2>Recent SMS</h2>
+            <div class="sms-list" id="smsList">
+                <p style="text-align: center; color: #666;">Loading...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="nav-component.js"></script>
+    <script>
+        const messageInput = document.getElementById('message');
+        const charCount = document.getElementById('charCount');
+        const smsCount = document.getElementById('smsCount');
+        const costEstimate = document.getElementById('costEstimate');
+        const estimatedCost = document.getElementById('estimatedCost');
+
+        // Update character count
+        messageInput.addEventListener('input', () => {
+            const length = messageInput.value.length;
+            charCount.textContent = length;
+
+            const parts = Math.ceil(length / 160) || 1;
+            smsCount.textContent = parts;
+
+            // Show cost estimate
+            if (length > 0) {
+                const cost = parts * 0.01;
+                estimatedCost.textContent = cost.toFixed(2);
+                costEstimate.style.display = 'block';
+            } else {
+                costEstimate.style.display = 'none';
+            }
+        });
+
+        async function sendSMS() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const message = messageInput.value;
+            const resultDiv = document.getElementById('result');
+            const sendBtn = document.getElementById('sendBtn');
+
+            if (!phoneNumber || !message) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            // Validate phone number format
+            if (!phoneNumber.match(/^\+[1-9]\d{1,14}$/)) {
+                alert('Invalid phone number format. Use E.164 format (e.g., +1234567890)');
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = '📤 Sending...';
+            resultDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/dexatel/sms/send', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        to: phoneNumber,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result-box success">
+                            ✅ SMS sent successfully!
+                            <br>Message ID: ${data.result.message_id}
+                            <br>Status: ${data.result.status}
+                            <br>Cost: $${(data.result.cost || 0).toFixed(4)}
+                        </div>
+                    `;
+
+                    // Clear form
+                    document.getElementById('phoneNumber').value = '';
+                    messageInput.value = '';
+                    messageInput.dispatchEvent(new Event('input'));
+
+                    // Reload recent SMS
+                    loadRecentSMS();
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result-box error">
+                            ❌ Error: ${data.error}
+                            <br>${data.message || ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-box error">
+                        ❌ Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '📤 Send SMS';
+            }
+        }
+
+        async function loadRecentSMS() {
+            try {
+                const response = await fetch('/api/dexatel/sms/list');
+                const data = await response.json();
+
+                const smsList = document.getElementById('smsList');
+
+                if (data.success && data.messages.length > 0) {
+                    smsList.innerHTML = data.messages.slice(0, 10).map(sms => `
+                        <div class="sms-item">
+                            <div><strong>To:</strong> ${sms.to_number}</div>
+                            <div><strong>Message:</strong> ${sms.message.substring(0, 100)}${sms.message.length > 100 ? '...' : ''}</div>
+                            <div>
+                                <strong>Status:</strong> 
+                                <span class="status-badge status-${sms.status}">${sms.status}</span>
+                            </div>
+                            <div><strong>Cost:</strong> $${(sms.cost || 0).toFixed(4)}</div>
+                            <div><strong>Sent:</strong> ${new Date(sms.created_at).toLocaleString()}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    smsList.innerHTML = '<p style="text-align: center; color: #666;">No SMS sent yet</p>';
+                }
+            } catch (error) {
+                console.error('Error loading SMS:', error);
+            }
+        }
+
+        // Load recent SMS on page load
+        window.addEventListener('load', loadRecentSMS);
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadRecentSMS, 30000);
+    </script>
+</body>
+
+</html>

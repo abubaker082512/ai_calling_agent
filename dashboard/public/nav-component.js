@@ -129,6 +129,19 @@ class NavigationComponent {
                         </svg>
                         <span>Settings</span>
                     </a>
+                    <a href="dexatel-sms.html" class="nav-item" data-page="dexatel-sms">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span>Send SMS</span>
+                    </a>
+                    <a href="dexatel-bulk-sms.html" class="nav-item" data-page="dexatel-bulk-sms">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            <path d="M8 10h8M8 14h4"></path>
+                        </svg>
+                        <span>Bulk SMS</span>
+                    </a>
                 </nav>
                 <div class="sidebar-footer">
                     <button class="theme-toggle" id="themeToggle" title="Toggle theme">

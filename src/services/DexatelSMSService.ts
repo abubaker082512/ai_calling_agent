@@ -52,8 +52,10 @@ export class DexatelSMSService {
 
             console.log(`📱 Sending SMS to: ${message.to}`);
 
+            // Official Dexatel API format
             const payload = {
                 data: {
+                    channel: 'SMS',
                     to: message.to,
                     text: message.text,
                     sender: message.from || this.defaultSender
@@ -74,13 +76,13 @@ export class DexatelSMSService {
                 }
             );
 
-            console.log(`✅ SMS sent: ${response.data.id}`);
+            console.log(`✅ SMS sent:`, response.data);
 
             return {
-                message_id: response.data.id,
-                status: response.data.status,
+                message_id: response.data.data?.id || response.data.id,
+                status: response.data.data?.status || response.data.status || 'sent',
                 to: message.to,
-                cost: response.data.cost
+                cost: response.data.data?.cost || response.data.cost || 0
             };
 
         } catch (error: any) {

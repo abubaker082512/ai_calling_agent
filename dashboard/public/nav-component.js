@@ -100,48 +100,50 @@ class NavigationComponent {
                     </a>
                     
                     <!-- Dexatel Section -->
-                    <div style="margin-top: 20px; padding: 10px 15px; color: #888; font-size: 12px; font-weight: 600; text-transform: uppercase;">Dexatel</div>
-                    <a href="dexatel-test.html" class="nav-item" data-page="dexatel-test">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M9 11l3 3L22 4"></path>
-                            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-                        </svg>
-                        <span>Test Suite</span>
-                    </a>
-                    <a href="dexatel-calls.html" class="nav-item" data-page="dexatel-calls">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                        </svg>
-                        <span>Calls</span>
-                    </a>
-                    <a href="dexatel-analytics.html" class="nav-item" data-page="dexatel-analytics">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="20" x2="12" y2="10"></line>
-                            <line x1="18" y1="20" x2="18" y2="4"></line>
-                            <line x1="6" y1="20" x2="6" y2="16"></line>
-                        </svg>
-                        <span>Analytics</span>
-                    </a>
-                    <a href="dexatel-settings.html" class="nav-item" data-page="dexatel-settings">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="3"></circle>
-                            <path d="M12 1v6m0 6v6m-9-9h6m6 0h6"></path>
-                        </svg>
-                        <span>Settings</span>
-                    </a>
-                    <a href="dexatel-sms.html" class="nav-item" data-page="dexatel-sms">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                        <span>Send SMS</span>
-                    </a>
-                    <a href="dexatel-bulk-sms.html" class="nav-item" data-page="dexatel-bulk-sms">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            <path d="M8 10h8M8 14h4"></path>
-                        </svg>
-                        <span>Bulk SMS</span>
-                    </a>
+                    <div class="nav-section">
+                        <span class="nav-label">DEXATEL</span>
+                        <a href="dexatel-test.html" class="nav-item" data-page="dexatel-test">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 11l3 3L22 4"></path>
+                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                            </svg>
+                            <span>Test Suite</span>
+                        </a>
+                        <a href="dexatel-calls.html" class="nav-item" data-page="dexatel-calls">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                            </svg>
+                            <span>Voice Calls</span>
+                        </a>
+                        <a href="dexatel-analytics.html" class="nav-item" data-page="dexatel-analytics">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="20" x2="12" y2="10"></line>
+                                <line x1="18" y1="20" x2="18" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="16"></line>
+                            </svg>
+                            <span>Analytics</span>
+                        </a>
+                        <a href="dexatel-sms.html" class="nav-item" data-page="dexatel-sms">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span>Send SMS</span>
+                        </a>
+                        <a href="dexatel-bulk-sms.html" class="nav-item" data-page="dexatel-bulk-sms">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                <path d="M8 10h8M8 14h4"></path>
+                            </svg>
+                            <span>Bulk SMS</span>
+                        </a>
+                        <a href="dexatel-settings.html" class="nav-item" data-page="dexatel-settings">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M12 1v6m0 6v6m-9-9h6m6 0h6"></path>
+                            </svg>
+                            <span>Settings</span>
+                        </a>
+                    </div>
                 </nav>
                 <div class="sidebar-footer">
                     <button class="theme-toggle" id="themeToggle" title="Toggle theme">

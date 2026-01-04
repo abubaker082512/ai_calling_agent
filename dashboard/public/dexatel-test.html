@@ -6,226 +6,109 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dexatel Test - AI Calling Agent</title>
     <link rel="stylesheet" href="styles.css">
-    <style>
-        .test-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .test-section {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .test-section h2 {
-            margin-top: 0;
-            color: #333;
-            border-bottom: 2px solid #4CAF50;
-            padding-bottom: 10px;
-        }
-
-        .test-button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin-right: 10px;
-            margin-bottom: 10px;
-        }
-
-        .test-button:hover {
-            background: #45a049;
-        }
-
-        .test-button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .test-result {
-            margin-top: 15px;
-            padding: 15px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 14px;
-            white-space: pre-wrap;
-        }
-
-        .test-result.success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-        }
-
-        .test-result.error {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-        }
-
-        .test-result.info {
-            background: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-        }
-
-        .input-group {
-            margin-bottom: 15px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-left: 10px;
-        }
-
-        .status-badge.success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-badge.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-badge.warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .log-container {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 15px;
-            max-height: 400px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 13px;
-        }
-
-        .log-entry {
-            margin-bottom: 8px;
-            padding: 4px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .log-entry:last-child {
-            border-bottom: none;
-        }
-
-        .log-time {
-            color: #6c757d;
-            margin-right: 10px;
-        }
-
-        .log-success {
-            color: #28a745;
-        }
-
-        .log-error {
-            color: #dc3545;
-        }
-
-        .log-info {
-            color: #17a2b8;
-        }
-    </style>
+    <link rel="stylesheet" href="dexatel-styles.css">
 </head>
 
 <body>
     <div id="navigation"></div>
 
-    <div class="test-container">
-        <h1>🧪 Dexatel Testing Suite</h1>
-        <p>Comprehensive testing for Dexatel Voice API integration</p>
-
-        <!-- API Key Test -->
-        <div class="test-section">
-            <h2>1. API Key & Balance Test</h2>
-            <p>Verify your Dexatel API key and check account balance</p>
-            <button class="test-button" onclick="testApiKey()">Test API Key</button>
-            <button class="test-button" onclick="checkBalance()">Check Balance</button>
-            <div id="apiKeyResult"></div>
+    <div class="main-content">
+        <div class="page-header">
+            <h1>🧪 Dexatel Testing Suite</h1>
+            <p>Comprehensive testing for Dexatel Voice API integration</p>
         </div>
 
-        <!-- Service Status -->
-        <div class="test-section">
-            <h2>2. Service Status</h2>
-            <p>Check if Dexatel service is configured and operational</p>
-            <button class="test-button" onclick="checkServiceStatus()">Check Status</button>
-            <div id="statusResult"></div>
-        </div>
-
-        <!-- Webhook Test -->
-        <div class="test-section">
-            <h2>3. Webhook Test</h2>
-            <p>Test the Dexatel webhook receiver</p>
-            <button class="test-button" onclick="testWebhook()">Test Webhook</button>
-            <div id="webhookResult"></div>
-        </div>
-
-        <!-- Make Test Call -->
-        <div class="test-section">
-            <h2>4. Make Test Call</h2>
-            <p>Make a test call using Dexatel Voice API</p>
-            <div class="input-group">
-                <label for="testPhoneNumber">Phone Number (E.164 format):</label>
-                <input type="tel" id="testPhoneNumber" placeholder="+923185954599">
+        <div class="content-wrapper">
+            <!-- API Key Test -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>1. API Key & Balance Test</h2>
+                        <p>Verify your Dexatel API key and check account balance</p>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="testApiKey()">Test API Key</button>
+                    <button class="btn btn-secondary" onclick="checkBalance()">Check Balance</button>
+                </div>
+                <div id="apiKeyResult"></div>
             </div>
-            <button class="test-button" onclick="makeTestCall()">Make Call</button>
-            <div id="callResult"></div>
-        </div>
 
-        <!-- Call List -->
-        <div class="test-section">
-            <h2>5. Recent Calls</h2>
-            <p>View recent Dexatel calls</p>
-            <button class="test-button" onclick="loadCalls()">Load Calls</button>
-            <div id="callsResult"></div>
-        </div>
+            <!-- Service Status -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>2. Service Status</h2>
+                        <p>Check if Dexatel service is configured and operational</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="checkServiceStatus()">Check Status</button>
+                <div id="statusResult"></div>
+            </div>
 
-        <!-- Analytics -->
-        <div class="test-section">
-            <h2>6. Analytics</h2>
-            <p>View call analytics and statistics</p>
-            <button class="test-button" onclick="loadAnalytics()">Load Analytics</button>
-            <div id="analyticsResult"></div>
-        </div>
+            <!-- Webhook Test -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>3. Webhook Test</h2>
+                        <p>Test the Dexatel webhook receiver</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="testWebhook()">Test Webhook</button>
+                <div id="webhookResult"></div>
+            </div>
 
-        <!-- Live Logs -->
-        <div class="test-section">
-            <h2>7. Live Logs</h2>
-            <div class="log-container" id="logContainer">
-                <div class="log-entry">
-                    <span class="log-time">[Ready]</span>
-                    <span class="log-info">Dexatel testing suite initialized</span>
+            <!-- Make Test Call -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>4. Make Test Call</h2>
+                        <p>Make a test call using Dexatel Voice API</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="testPhoneNumber">Phone Number (E.164 format):</label>
+                    <input type="tel" class="form-input" id="testPhoneNumber" placeholder="+923185954599">
+                    <div class="form-hint">Format: +[country code][number]</div>
+                </div>
+                <button class="btn btn-success" onclick="makeTestCall()">Make Call</button>
+                <div id="callResult"></div>
+            </div>
+
+            <!-- Recent Calls -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>5. Recent Calls</h2>
+                        <p>View recent Dexatel calls</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="loadCalls()">Load Calls</button>
+                <div id="callsResult"></div>
+            </div>
+
+            <!-- Analytics -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>6. Analytics</h2>
+                        <p>View call analytics and statistics</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="loadAnalytics()">Load Analytics</button>
+                <div id="analyticsResult"></div>
+            </div>
+
+            <!-- Live Logs -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>7. Live Logs</h2>
+                </div>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry">
+                        <span class="log-time">[Ready]</span>
+                        <span class="log-info">Dexatel testing suite initialized</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -233,7 +116,6 @@
 
     <script src="nav-component.js"></script>
     <script>
-        // Logging function
         function addLog(message, type = 'info') {
             const logContainer = document.getElementById('logContainer');
             const time = new Date().toLocaleTimeString();
@@ -247,11 +129,10 @@
             logContainer.scrollTop = logContainer.scrollHeight;
         }
 
-        // Test API Key
         async function testApiKey() {
             addLog('Testing API key...', 'info');
             const resultDiv = document.getElementById('apiKeyResult');
-            resultDiv.innerHTML = '<div class="test-result info">Testing...</div>';
+            resultDiv.innerHTML = '<div class="alert alert-info">Testing...</div>';
 
             try {
                 const response = await fetch('/api/dexatel/status');
@@ -259,38 +140,33 @@
 
                 if (data.success && data.configured) {
                     resultDiv.innerHTML = `
-                        <div class="test-result success">
-                            ✅ API Key Configured
-                            <br>Status: ${data.status}
-                            <br>Provider: ${data.provider}
-                            <br>Features: ${data.features.join(', ')}
+                        <div class="alert alert-success">
+                            ✅ API Key Configured<br>
+                            Status: ${data.status}<br>
+                            Provider: ${data.provider}<br>
+                            Features: ${data.features.join(', ')}
                         </div>
                     `;
                     addLog('API key test passed', 'success');
                 } else {
                     resultDiv.innerHTML = `
-                        <div class="test-result error">
-                            ❌ API Key Not Configured
-                            <br>Please add DEXATEL_API_KEY to your .env file
+                        <div class="alert alert-error">
+                            ❌ API Key Not Configured<br>
+                            Please add DEXATEL_API_KEY to your environment
                         </div>
                     `;
                     addLog('API key not configured', 'error');
                 }
             } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="test-result error">
-                        ❌ Error: ${error.message}
-                    </div>
-                `;
+                resultDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${error.message}</div>`;
                 addLog(`API key test failed: ${error.message}`, 'error');
             }
         }
 
-        // Check Balance
         async function checkBalance() {
             addLog('Checking account balance...', 'info');
             const resultDiv = document.getElementById('apiKeyResult');
-            resultDiv.innerHTML = '<div class="test-result info">Checking balance...</div>';
+            resultDiv.innerHTML = '<div class="alert alert-info">Checking balance...</div>';
 
             try {
                 const response = await fetch('/api/dexatel/balance');
@@ -298,92 +174,76 @@
 
                 if (data.success) {
                     resultDiv.innerHTML = `
-                        <div class="test-result success">
-                            ✅ Balance Retrieved
-                            <br>${JSON.stringify(data.balance, null, 2)}
+                        <div class="alert alert-success">
+                            ✅ Balance Retrieved<br>
+                            ${JSON.stringify(data.balance, null, 2)}
                         </div>
                     `;
                     addLog('Balance check successful', 'success');
                 } else {
                     resultDiv.innerHTML = `
-                        <div class="test-result error">
-                            ❌ ${data.error}
-                            <br>${data.message}
+                        <div class="alert alert-error">
+                            ❌ ${data.error}<br>${data.message}
                         </div>
                     `;
                     addLog(`Balance check failed: ${data.message}`, 'error');
                 }
             } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="test-result error">
-                        ❌ Error: ${error.message}
-                    </div>
-                `;
+                resultDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${error.message}</div>`;
                 addLog(`Balance check error: ${error.message}`, 'error');
             }
         }
 
-        // Check Service Status
         async function checkServiceStatus() {
             addLog('Checking service status...', 'info');
             const resultDiv = document.getElementById('statusResult');
-            resultDiv.innerHTML = '<div class="test-result info">Checking...</div>';
+            resultDiv.innerHTML = '<div class="alert alert-info">Checking...</div>';
 
             try {
                 const response = await fetch('/api/dexatel/status');
                 const data = await response.json();
 
                 resultDiv.innerHTML = `
-                    <div class="test-result ${data.success ? 'success' : 'error'}">
-                        ${data.success ? '✅' : '❌'} Service Status
-                        <br>Status: ${data.status}
-                        <br>Configured: ${data.configured ? 'Yes' : 'No'}
-                        <br>Provider: ${data.provider}
-                        <br>Features: ${data.features.join(', ')}
+                    <div class="alert alert-${data.success ? 'success' : 'error'}">
+                        ${data.success ? '✅' : '❌'} Service Status<br>
+                        Status: ${data.status}<br>
+                        Configured: ${data.configured ? 'Yes' : 'No'}<br>
+                        Provider: ${data.provider}<br>
+                        Features: ${data.features.join(', ')}
                     </div>
                 `;
                 addLog(`Service status: ${data.status}`, data.success ? 'success' : 'error');
             } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="test-result error">
-                        ❌ Error: ${error.message}
-                    </div>
-                `;
+                resultDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${error.message}</div>`;
                 addLog(`Status check error: ${error.message}`, 'error');
             }
         }
 
-        // Test Webhook
         async function testWebhook() {
             addLog('Testing webhook...', 'info');
             const resultDiv = document.getElementById('webhookResult');
-            resultDiv.innerHTML = '<div class="test-result info">Testing...</div>';
+            resultDiv.innerHTML = '<div class="alert alert-info">Testing...</div>';
 
             try {
                 const response = await fetch('/dexatel/events/test');
                 const data = await response.json();
 
                 resultDiv.innerHTML = `
-                    <div class="test-result success">
-                        ✅ Webhook Test Passed
-                        <br>Status: ${data.status}
-                        <br>Message: ${data.message}
-                        <br>Endpoint: ${data.endpoint}
-                        <br>Provider: ${data.provider}
+                    <div class="alert alert-success">
+                        ✅ Webhook Test Passed<br>
+                        Status: ${data.status}<br>
+                        Message: ${data.message}<br>
+                        Endpoint: ${data.endpoint}<br>
+                        Provider: ${data.provider}
                     </div>
                 `;
                 addLog('Webhook test passed', 'success');
             } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="test-result error">
-                        ❌ Error: ${error.message}
-                    </div>
-                `;
+                resultDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${error.message}</div>`;
                 addLog(`Webhook test failed: ${error.message}`, 'error');
             }
         }
 
-        // Make Test Call
         async function makeTestCall() {
             const phoneNumber = document.getElementById('testPhoneNumber').value;
 
@@ -394,14 +254,12 @@
 
             addLog(`Making test call to ${phoneNumber}...`, 'info');
             const resultDiv = document.getElementById('callResult');
-            resultDiv.innerHTML = '<div class="test-result info">Initiating call...</div>';
+            resultDiv.innerHTML = '<div class="alert alert-info">Initiating call...</div>';
 
             try {
                 const response = await fetch('/api/dexatel/call', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ to: phoneNumber })
                 });
 
@@ -409,19 +267,18 @@
 
                 if (data.success) {
                     resultDiv.innerHTML = `
-                        <div class="test-result success">
-                            ✅ Call Initiated
-                            <br>Call ID: ${data.call.call_id}
-                            <br>Status: ${data.call.status}
-                            <br>To: ${phoneNumber}
+                        <div class="alert alert-success">
+                            ✅ Call Initiated<br>
+                            Call ID: ${data.call.call_id}<br>
+                            Status: ${data.call.status}<br>
+                            To: ${phoneNumber}
                         </div>
                     `;
                     addLog(`Call initiated: ${data.call.call_id}`, 'success');
                 } else {
                     resultDiv.innerHTML = `
-                        <div class="test-result error">
-                            ❌ ${data.error}
-                            <br>${data.message}
+                        <div class="alert alert-error">
+                            ❌ ${data.error}<br>${data.message}
                             ${data.message.includes('403') || data.message.includes('not activated') ?
                             '<br><br>⚠️ Voice API not activated. Contact Dexatel support at [email protected]' : ''}
                         </div>
@@ -429,20 +286,15 @@
                     addLog(`Call failed: ${data.message}`, 'error');
                 }
             } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="test-result error">
-                        ❌ Error: ${error.message}
-                    </div>
-                `;
+                resultDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${error.message}</div>`;
                 addLog(`Call error: ${error.message}`, 'error');
             }
         }
 
-        // Load Calls
         async function loadCalls() {
             addLog('Loading recent calls...', 'info');
             const resultDiv = document.getElementById('callsResult');
-            resultDiv.innerHTML = '<div class="test-result info">Loading...</div>';
+            resultDiv.innerHTML = '<div class="alert alert-info">Loading...</div>';
 
             try {
                 const response = await fetch('/api/dexatel/calls');
@@ -450,17 +302,13 @@
 
                 if (data.success) {
                     if (data.calls.length === 0) {
-                        resultDiv.innerHTML = `
-                            <div class="test-result info">
-                                ℹ️ No calls found
-                            </div>
-                        `;
+                        resultDiv.innerHTML = '<div class="alert alert-info">ℹ️ No calls found</div>';
                     } else {
                         const callsHtml = data.calls.map(call => `
-                            <div style="border-bottom: 1px solid #eee; padding: 10px 0;">
+                            <div style="padding: 16px 0; border-bottom: 1px solid var(--border);">
                                 <strong>Call ID:</strong> ${call.call_id}<br>
                                 <strong>To:</strong> ${call.to_number}<br>
-                                <strong>Status:</strong> <span class="status-badge ${call.status === 'completed' ? 'success' : 'warning'}">${call.status}</span><br>
+                                <strong>Status:</strong> <span class="badge badge-${call.status === 'completed' ? 'success' : 'warning'}">${call.status}</span><br>
                                 <strong>Duration:</strong> ${call.duration || 0}s<br>
                                 <strong>Cost:</strong> $${call.cost || 0}<br>
                                 <strong>Created:</strong> ${new Date(call.created_at).toLocaleString()}
@@ -468,36 +316,26 @@
                         `).join('');
 
                         resultDiv.innerHTML = `
-                            <div class="test-result success">
-                                ✅ Found ${data.calls.length} calls
-                                <br><br>${callsHtml}
+                            <div class="alert alert-success">
+                                ✅ Found ${data.calls.length} calls<br><br>${callsHtml}
                             </div>
                         `;
                     }
                     addLog(`Loaded ${data.calls.length} calls`, 'success');
                 } else {
-                    resultDiv.innerHTML = `
-                        <div class="test-result error">
-                            ❌ ${data.error}
-                        </div>
-                    `;
+                    resultDiv.innerHTML = `<div class="alert alert-error">❌ ${data.error}</div>`;
                     addLog(`Failed to load calls: ${data.error}`, 'error');
                 }
             } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="test-result error">
-                        ❌ Error: ${error.message}
-                    </div>
-                `;
+                resultDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${error.message}</div>`;
                 addLog(`Load calls error: ${error.message}`, 'error');
             }
         }
 
-        // Load Analytics
         async function loadAnalytics() {
             addLog('Loading analytics...', 'info');
             const resultDiv = document.getElementById('analyticsResult');
-            resultDiv.innerHTML = '<div class="test-result info">Loading...</div>';
+            resultDiv.innerHTML = '<div class="alert alert-info">Loading...</div>';
 
             try {
                 const response = await fetch('/api/dexatel/analytics');
@@ -506,9 +344,8 @@
                 if (data.success) {
                     const analytics = data.analytics;
                     resultDiv.innerHTML = `
-                        <div class="test-result success">
-                            ✅ Analytics
-                            <br><br>
+                        <div class="alert alert-success">
+                            ✅ Analytics<br><br>
                             <strong>Total Calls:</strong> ${analytics.total_calls}<br>
                             <strong>Active:</strong> ${analytics.active_calls}<br>
                             <strong>Completed:</strong> ${analytics.completed_calls}<br>
@@ -521,24 +358,15 @@
                     `;
                     addLog('Analytics loaded successfully', 'success');
                 } else {
-                    resultDiv.innerHTML = `
-                        <div class="test-result error">
-                            ❌ ${data.error}
-                        </div>
-                    `;
+                    resultDiv.innerHTML = `<div class="alert alert-error">❌ ${data.error}</div>`;
                     addLog(`Analytics load failed: ${data.error}`, 'error');
                 }
             } catch (error) {
-                resultDiv.innerHTML = `
-                    <div class="test-result error">
-                        ❌ Error: ${error.message}
-                    </div>
-                `;
+                resultDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${error.message}</div>`;
                 addLog(`Analytics error: ${error.message}`, 'error');
             }
         }
 
-        // Auto-run status check on load
         window.addEventListener('load', () => {
             addLog('Page loaded, running initial checks...', 'info');
             checkServiceStatus();

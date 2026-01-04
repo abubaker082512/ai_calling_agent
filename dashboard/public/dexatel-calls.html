@@ -6,185 +6,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dexatel Calls - AI Calling Agent</title>
     <link rel="stylesheet" href="styles.css">
-    <style>
-        .calls-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .calls-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .calls-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #4CAF50;
-        }
-
-        .stat-label {
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .calls-table {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: #f8f9fa;
-            padding: 15px;
-            text-align: left;
-            font-weight: 600;
-            color: #333;
-            border-bottom: 2px solid #dee2e6;
-        }
-
-        td {
-            padding: 15px;
-            border-bottom: 1px solid #dee2e6;
-        }
-
-        tr:hover {
-            background: #f8f9fa;
-        }
-
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .status-active {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-completed {
-            background: #d1ecf1;
-            color: #0c5460;
-        }
-
-        .status-failed {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-ended {
-            background: #e2e3e5;
-            color: #383d41;
-        }
-
-        .action-btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            margin-right: 5px;
-        }
-
-        .btn-hangup {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-details {
-            background: #007bff;
-            color: white;
-        }
-
-        .refresh-btn {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-        }
-    </style>
+    <link rel="stylesheet" href="dexatel-styles.css">
 </head>
 
 <body>
     <div id="navigation"></div>
 
-    <div class="calls-container">
-        <div class="calls-header">
+    <div class="main-content">
+        <div class="page-header">
             <h1>📞 Dexatel Calls</h1>
-            <button class="refresh-btn" onclick="loadCalls()">🔄 Refresh</button>
+            <p>Manage and monitor your Dexatel voice calls</p>
         </div>
 
-        <div class="calls-stats" id="stats">
-            <div class="stat-card">
-                <div class="stat-value" id="totalCalls">0</div>
-                <div class="stat-label">Total Calls</div>
+        <div class="content-wrapper">
+            <!-- Stats -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Calls</div>
+                    <div class="stat-value" id="totalCalls">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Active Calls</div>
+                    <div class="stat-value" id="activeCalls">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Completed</div>
+                    <div class="stat-value" id="completedCalls">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Cost</div>
+                    <div class="stat-value" id="totalCost">$0.00</div>
+                </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="activeCalls">0</div>
-                <div class="stat-label">Active Now</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="completedCalls">0</div>
-                <div class="stat-label">Completed</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="totalCost">$0.00</div>
-                <div class="stat-label">Total Cost</div>
-            </div>
-        </div>
 
-        <div class="calls-table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Call ID</th>
-                        <th>To Number</th>
-                        <th>Status</th>
-                        <th>Duration</th>
-                        <th>Cost</th>
-                        <th>Started</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="callsTableBody">
-                    <tr>
-                        <td colspan="7" class="loading">Loading calls...</td>
-                    </tr>
-                </tbody>
-            </table>
+            <!-- Calls List -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Recent Calls</h2>
+                        <p>Auto-refreshes every 10 seconds</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="loadCalls()">🔄 Refresh</button>
+                </div>
+                <div class="table-container" id="callsContainer">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📞</div>
+                        <div class="empty-state-title">Loading calls...</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -195,85 +65,93 @@
                 const response = await fetch('/api/dexatel/calls');
                 const data = await response.json();
 
-                if (data.success) {
-                    displayCalls(data.calls);
-                    updateStats(data.calls);
+                if (data.success && data.calls.length > 0) {
+                    const tableHtml = `
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Call ID</th>
+                                    <th>To Number</th>
+                                    <th>Status</th>
+                                    <th>Duration</th>
+                                    <th>Cost</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.calls.map(call => `
+                                    <tr>
+                                        <td><code>${call.call_id.substring(0, 8)}...</code></td>
+                                        <td>${call.to_number}</td>
+                                        <td><span class="badge badge-${call.status === 'completed' ? 'success' : call.status === 'active' ? 'info' : 'error'}">${call.status}</span></td>
+                                        <td>${call.duration || 0}s</td>
+                                        <td>$${(call.cost || 0).toFixed(4)}</td>
+                                        <td>${new Date(call.created_at).toLocaleString()}</td>
+                                        <td>
+                                            ${call.status === 'active' ?
+                            `<button class="btn btn-danger" onclick="hangupCall('${call.call_id}')">Hangup</button>` :
+                            '<span style="color: var(--text-tertiary);">-</span>'}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    document.getElementById('callsContainer').innerHTML = tableHtml;
+
+                    // Update stats
+                    const stats = data.calls.reduce((acc, call) => {
+                        acc.total++;
+                        if (call.status === 'active') acc.active++;
+                        if (call.status === 'completed') acc.completed++;
+                        acc.cost += call.cost || 0;
+                        return acc;
+                    }, { total: 0, active: 0, completed: 0, cost: 0 });
+
+                    document.getElementById('totalCalls').textContent = stats.total;
+                    document.getElementById('activeCalls').textContent = stats.active;
+                    document.getElementById('completedCalls').textContent = stats.completed;
+                    document.getElementById('totalCost').textContent = `$${stats.cost.toFixed(2)}`;
+                } else {
+                    document.getElementById('callsContainer').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📞</div>
+                            <div class="empty-state-title">No calls yet</div>
+                            <div class="empty-state-description">Make your first call to see it here</div>
+                        </div>
+                    `;
                 }
             } catch (error) {
-                console.error('Error loading calls:', error);
-                document.getElementById('callsTableBody').innerHTML = `
-                    <tr><td colspan="7" style="text-align: center; color: red;">
-                        Error loading calls: ${error.message}
-                    </td></tr>
+                document.getElementById('callsContainer').innerHTML = `
+                    <div class="alert alert-error">❌ Error loading calls: ${error.message}</div>
                 `;
             }
-        }
-
-        function displayCalls(calls) {
-            const tbody = document.getElementById('callsTableBody');
-
-            if (calls.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">No calls found</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = calls.map(call => `
-                <tr>
-                    <td><code>${call.call_id.substring(0, 12)}...</code></td>
-                    <td>${call.to_number}</td>
-                    <td><span class="status-badge status-${call.status}">${call.status}</span></td>
-                    <td>${call.duration || 0}s</td>
-                    <td>$${(call.cost || 0).toFixed(4)}</td>
-                    <td>${new Date(call.created_at).toLocaleString()}</td>
-                    <td>
-                        ${call.status === 'active' ?
-                    `<button class="action-btn btn-hangup" onclick="hangupCall('${call.call_id}')">Hangup</button>` :
-                    ''}
-                        <button class="action-btn btn-details" onclick="viewDetails('${call.call_id}')">Details</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function updateStats(calls) {
-            document.getElementById('totalCalls').textContent = calls.length;
-            document.getElementById('activeCalls').textContent =
-                calls.filter(c => c.status === 'active').length;
-            document.getElementById('completedCalls').textContent =
-                calls.filter(c => c.status === 'completed').length;
-            document.getElementById('totalCost').textContent =
-                '$' + calls.reduce((sum, c) => sum + (c.cost || 0), 0).toFixed(2);
         }
 
         async function hangupCall(callId) {
             if (!confirm('Are you sure you want to hangup this call?')) return;
 
             try {
-                const response = await fetch(`/api/dexatel/calls/${callId}`, {
-                    method: 'DELETE'
-                });
+                const response = await fetch(`/api/dexatel/calls/${callId}`, { method: 'DELETE' });
                 const data = await response.json();
 
                 if (data.success) {
                     alert('Call ended successfully');
                     loadCalls();
                 } else {
-                    alert('Error: ' + data.error);
+                    alert(`Error: ${data.error}`);
                 }
             } catch (error) {
-                alert('Error hanging up call: ' + error.message);
+                alert(`Error: ${error.message}`);
             }
         }
 
-        function viewDetails(callId) {
-            window.location.href = `call-details.html?id=${callId}&provider=dexatel`;
-        }
+        // Load calls on page load
+        window.addEventListener('load', loadCalls);
 
         // Auto-refresh every 10 seconds
         setInterval(loadCalls, 10000);
-
-        // Load on page load
-        window.addEventListener('load', loadCalls);
     </script>
 </body>
 

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telnyx SMS - AI Calling Agent</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dexatel-styles.css">
+</head>
+
+<body>
+    <!-- Sidebar Navigation -->
+    <div id="nav-placeholder"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="page-header">
+            <h1>📱 Send SMS</h1>
+            <p>Send single SMS messages via Telnyx</p>
+        </div>
+
+        <div class="content-wrapper">
+            <!-- Send SMS Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Send Single SMS</h2>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="phoneNumber">Phone Number</label>
+                    <input type="tel" class="form-input" id="phoneNumber" placeholder="+1234567890">
+                    <div class="form-hint">E.164 format (e.g., +1234567890)</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="message">Message</label>
+                    <textarea class="form-textarea" id="message" placeholder="Enter your message here..."></textarea>
+                    <div class="form-hint">
+                        <span id="charCount">0</span> / 160 characters
+                        (<span id="smsCount">1</span> SMS)
+                    </div>
+                </div>
+
+                <div class="alert alert-info" id="costEstimate" style="display: none;">
+                    💰 <strong>Estimated Cost:</strong> $<span id="estimatedCost">0.00</span>
+                </div>
+
+                <button class="btn btn-success" id="sendBtn" onclick="sendSMS()">📤 Send SMS</button>
+
+                <div id="result"></div>
+            </div>
+
+            <!-- Recent SMS -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Recent Messages</h2>
+                        <p>Last 20 SMS messages sent</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="loadRecentSMS()">🔄 Refresh</button>
+                </div>
+                <div id="recentSMS">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📱</div>
+                        <div class="empty-state-title">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="nav-component.js"></script>
+    <script>
+        const messageInput = document.getElementById('message');
+        const charCount = document.getElementById('charCount');
+        const smsCount = document.getElementById('smsCount');
+        const costEstimate = document.getElementById('costEstimate');
+        const estimatedCost = document.getElementById('estimatedCost');
+
+        // Update character count and cost estimate
+        messageInput.addEventListener('input', () => {
+            const length = messageInput.value.length;
+            const parts = Math.ceil(length / 160) || 1;
+            const cost = parts * 0.0075; // Telnyx average cost
+
+            charCount.textContent = length;
+            smsCount.textContent = parts;
+            estimatedCost.textContent = cost.toFixed(4);
+
+            if (length > 0) {
+                costEstimate.style.display = 'block';
+            } else {
+                costEstimate.style.display = 'none';
+            }
+        });
+
+        async function sendSMS() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const message = messageInput.value;
+            const resultDiv = document.getElementById('result');
+            const sendBtn = document.getElementById('sendBtn');
+
+            if (!phoneNumber || !message) {
+                alert('Please enter both phone number and message');
+                return;
+            }
+
+            // Validate phone number format
+            if (!phoneNumber.match(/^\+[1-9]\d{1,14}$/)) {
+                alert('Invalid phone number format. Please use E.164 format (e.g., +1234567890)');
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = '📤 Sending...';
+            resultDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/telnyx/sms/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        to: phoneNumber,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            ✅ SMS sent successfully!<br>
+                            Message ID: ${data.sms.message_id}<br>
+                            Status: ${data.sms.status}<br>
+                            Cost: $${data.sms.cost?.toFixed(4) || '0.0000'}
+                        </div>
+                    `;
+
+                    // Clear form
+                    document.getElementById('phoneNumber').value = '';
+                    messageInput.value = '';
+                    messageInput.dispatchEvent(new Event('input'));
+
+                    // Reload recent SMS
+                    loadRecentSMS();
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-error">
+                            ❌ Error: ${data.error}<br>
+                            ${data.message || ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        ❌ Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '📤 Send SMS';
+            }
+        }
+
+        async function loadRecentSMS() {
+            try {
+                const response = await fetch('/api/telnyx/sms/list?limit=20');
+                const data = await response.json();
+
+                const recentDiv = document.getElementById('recentSMS');
+
+                if (data.success && data.messages.length > 0) {
+                    recentDiv.innerHTML = data.messages.map(sms => `
+                        <div style="padding: 16px 0; border-bottom: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                <div>
+                                    <strong>${sms.to_number}</strong><br>
+                                    <span style="color: var(--text-secondary); font-size: 13px;">
+                                        ${new Date(sms.created_at).toLocaleString()}
+                                    </span>
+                                </div>
+                                <span class="badge badge-${sms.status === 'delivered' ? 'success' : sms.status === 'sent' ? 'info' : 'error'}">
+                                    ${sms.status}
+                                </span>
+                            </div>
+                            <div style="color: var(--text-secondary); font-size: 14px; margin-bottom: 4px;">
+                                ${sms.message.substring(0, 100)}${sms.message.length > 100 ? '...' : ''}
+                            </div>
+                            <div style="color: var(--text-tertiary); font-size: 12px;">
+                                Cost: $${sms.cost?.toFixed(4) || '0.0000'}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    recentDiv.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📱</div>
+                            <div class="empty-state-title">No messages yet</div>
+                            <div class="empty-state-description">Send your first SMS to get started</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading recent SMS:', error);
+            }
+        }
+
+        // Load recent SMS on page load
+        window.addEventListener('load', loadRecentSMS);
+    </script>
+</body>
+
+</html>

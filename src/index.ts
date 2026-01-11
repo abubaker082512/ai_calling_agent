@@ -104,6 +104,13 @@ fastify.register(async (instance) => {
     instance.register(dexatelSmsApiRoutes);
 }, { prefix: '/api/dexatel/sms' });
 
+// Register Telnyx SMS API routes
+import telnyxSmsApiRoutes from './routes/telnyxSmsApi';
+fastify.register(async (instance) => {
+    instance.register(telnyxSmsApiRoutes);
+}, { prefix: '/api/telnyx/sms' });
+
+
 // Register Telnyx Webhook routes (legacy - for backward compatibility)
 fastify.register(telnyxWebhookRoutes);
 

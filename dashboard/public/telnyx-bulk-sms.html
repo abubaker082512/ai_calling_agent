@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk SMS - AI Calling Agent</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dexatel-styles.css">
+</head>
+
+<body>
+    <!-- Sidebar Navigation -->
+    <div id="nav-placeholder"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="page-header">
+            <h1>📨 Bulk SMS</h1>
+            <p>Send SMS to multiple recipients at once</p>
+        </div>
+
+        <div class="content-wrapper">
+            <!-- Bulk SMS Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Create Bulk SMS Campaign</h2>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="campaignName">Campaign Name</label>
+                    <input type="text" class="form-input" id="campaignName" placeholder="e.g., Holiday Promotion">
+                    <div class="form-hint">Give your campaign a memorable name</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="recipients">Recipients (one per line)</label>
+                    <textarea class="form-textarea" id="recipients" placeholder="+1234567890
++0987654321
++1111111111" style="min-height: 150px;"></textarea>
+                    <div class="form-hint">
+                        <span id="recipientCount">0</span> recipients
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="bulkMessage">Message</label>
+                    <textarea class="form-textarea" id="bulkMessage"
+                        placeholder="Enter your message here..."></textarea>
+                    <div class="form-hint">
+                        <span id="bulkCharCount">0</span> / 160 characters
+                        (<span id="bulkSmsCount">1</span> SMS per recipient)
+                    </div>
+                </div>
+
+                <div class="alert alert-info" id="bulkCostEstimate" style="display: none;">
+                    💰 <strong>Total Cost Estimate:</strong> $<span id="bulkEstimatedCost">0.00</span>
+                    (<span id="totalSmsCount">0</span> SMS total)
+                </div>
+
+                <button class="btn btn-success" id="sendBulkBtn" onclick="sendBulkSMS()">📤 Send Bulk SMS</button>
+
+                <div id="bulkResult"></div>
+            </div>
+
+            <!-- Campaign History -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Campaign History</h2>
+                        <p>Recent bulk SMS campaigns</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="loadCampaigns()">🔄 Refresh</button>
+                </div>
+                <div id="campaignsList">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📨</div>
+                        <div class="empty-state-title">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="nav-component.js"></script>
+    <script>
+        const recipientsInput = document.getElementById('recipients');
+        const bulkMessageInput = document.getElementById('bulkMessage');
+        const recipientCount = document.getElementById('recipientCount');
+        const bulkCharCount = document.getElementById('bulkCharCount');
+        const bulkSmsCount = document.getElementById('bulkSmsCount');
+        const totalSmsCount = document.getElementById('totalSmsCount');
+        const bulkCostEstimate = document.getElementById('bulkCostEstimate');
+        const bulkEstimatedCost = document.getElementById('bulkEstimatedCost');
+
+        function updateBulkEstimate() {
+            const recipients = recipientsInput.value.split('\n').filter(r => r.trim()).length;
+            const messageLength = bulkMessageInput.value.length;
+            const parts = Math.ceil(messageLength / 160) || 1;
+            const total = recipients * parts;
+            const cost = total * 0.0075; // Telnyx average cost
+
+            recipientCount.textContent = recipients;
+            bulkCharCount.textContent = messageLength;
+            bulkSmsCount.textContent = parts;
+            totalSmsCount.textContent = total;
+            bulkEstimatedCost.textContent = cost.toFixed(4);
+
+            if (recipients > 0 && messageLength > 0) {
+                bulkCostEstimate.style.display = 'block';
+            } else {
+                bulkCostEstimate.style.display = 'none';
+            }
+        }
+
+        recipientsInput.addEventListener('input', updateBulkEstimate);
+        bulkMessageInput.addEventListener('input', updateBulkEstimate);
+
+        async function sendBulkSMS() {
+            const campaignName = document.getElementById('campaignName').value;
+            const recipients = recipientsInput.value.split('\n').filter(r => r.trim());
+            const message = bulkMessageInput.value;
+            const resultDiv = document.getElementById('bulkResult');
+            const sendBtn = document.getElementById('sendBulkBtn');
+
+            if (!campaignName || recipients.length === 0 || !message) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            // Validate phone numbers
+            const invalidNumbers = recipients.filter(num => !num.match(/^\+[1-9]\d{1,14}$/));
+            if (invalidNumbers.length > 0) {
+                alert(`Invalid phone numbers found:\n${invalidNumbers.join('\n')}\n\nPlease use E.164 format (e.g., +1234567890)`);
+                return;
+            }
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = '📤 Sending...';
+            resultDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('/api/telnyx/sms/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        campaignName: campaignName,
+                        to: recipients,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-success">
+                            ✅ Bulk SMS campaign sent!<br>
+                            Campaign: ${campaignName}<br>
+                            Successful: ${data.summary.successful}<br>
+                            Failed: ${data.summary.failed}<br>
+                            Total Cost: $${data.summary.total_cost}
+                        </div>
+                    `;
+
+                    // Clear form
+                    document.getElementById('campaignName').value = '';
+                    recipientsInput.value = '';
+                    bulkMessageInput.value = '';
+                    updateBulkEstimate();
+
+                    loadCampaigns();
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="alert alert-error">
+                            ❌ Error: ${data.error}<br>
+                            ${data.message || ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-error">
+                        ❌ Error: ${error.message}
+                    </div>
+                `;
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = '📤 Send Bulk SMS';
+            }
+        }
+
+        async function loadCampaigns() {
+            try {
+                const response = await fetch('/api/telnyx/sms/list?limit=100');
+                const data = await response.json();
+
+                const campaignsList = document.getElementById('campaignsList');
+
+                if (data.success && data.messages.length > 0) {
+                    // Group by campaign
+                    const campaigns = {};
+                    data.messages.forEach(sms => {
+                        const campaign = sms.campaign_id || 'single';
+                        if (!campaigns[campaign]) {
+                            campaigns[campaign] = {
+                                messages: [],
+                                totalCost: 0,
+                                sent: 0,
+                                delivered: 0,
+                                failed: 0
+                            };
+                        }
+                        campaigns[campaign].messages.push(sms);
+                        campaigns[campaign].totalCost += sms.cost || 0;
+                        if (sms.status === 'sent') campaigns[campaign].sent++;
+                        if (sms.status === 'delivered') campaigns[campaign].delivered++;
+                        if (sms.status === 'failed') campaigns[campaign].failed++;
+                    });
+
+                    campaignsList.innerHTML = Object.entries(campaigns).slice(0, 10).map(([id, campaign]) => `
+                        <div style="padding: 20px 0; border-bottom: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                <div>
+                                    <strong>Campaign ${id.substring(0, 8)}</strong><br>
+                                    <span style="color: var(--text-secondary); font-size: 13px;">
+                                        ${campaign.messages.length} recipients
+                                    </span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div style="font-size: 18px; font-weight: 600;">$${campaign.totalCost.toFixed(4)}</div>
+                                    <div style="color: var(--text-secondary); font-size: 12px;">Total Cost</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 12px;">
+                                <span class="badge badge-success">${campaign.delivered} delivered</span>
+                                <span class="badge badge-info">${campaign.sent} sent</span>
+                                ${campaign.failed > 0 ? `<span class="badge badge-error">${campaign.failed} failed</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    campaignsList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📨</div>
+                            <div class="empty-state-title">No campaigns yet</div>
+                            <div class="empty-state-description">Create your first bulk SMS campaign</div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading campaigns:', error);
+            }
+        }
+
+        window.addEventListener('load', loadCampaigns);
+    </script>
+</body>
+
+</html>

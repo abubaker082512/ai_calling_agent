@@ -144,6 +144,32 @@ class NavigationComponent {
                             <span>Settings</span>
                         </a>
                     </div>
+                    
+                    <!-- Telnyx SMS Section -->
+                    <div class="nav-section">
+                        <span class="nav-label">TELNYX SMS</span>
+                        <a href="telnyx-sms.html" class="nav-item" data-page="telnyx-sms">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span>Send SMS</span>
+                        </a>
+                        <a href="telnyx-bulk-sms.html" class="nav-item" data-page="telnyx-bulk-sms">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                <path d="M8 10h8M8 14h4"></path>
+                            </svg>
+                            <span>Bulk SMS</span>
+                        </a>
+                        <a href="telnyx-sms-analytics.html" class="nav-item" data-page="telnyx-sms-analytics">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="20" x2="12" y2="10"></line>
+                                <line x1="18" y1="20" x2="18" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="16"></line>
+                            </svg>
+                            <span>Analytics</span>
+                        </a>
+                    </div>
                 </nav>
                 <div class="sidebar-footer">
                     <button class="theme-toggle" id="themeToggle" title="Toggle theme">

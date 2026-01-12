@@ -1,5 +1,4 @@
-import telnyx from 'telnyx';
-import { supabase } from '../config/supabase';
+import { SupabaseService } from '../services/supabase';
 
 interface SMSMessage {
     to: string;
@@ -24,6 +23,7 @@ interface SMSResponse {
 export class TelnyxSMSService {
     private client: any;
     private fromNumber: string;
+    private supabase: SupabaseService;
 
     constructor() {
         const apiKey = process.env.TELNYX_API_KEY;
@@ -31,8 +31,11 @@ export class TelnyxSMSService {
             throw new Error('TELNYX_API_KEY is not configured');
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const telnyx = require('telnyx');
         this.client = telnyx(apiKey);
         this.fromNumber = process.env.TELNYX_PHONE_NUMBER || '';
+        this.supabase = new SupabaseService();
 
         if (!this.fromNumber) {
             console.warn('⚠️ TELNYX_PHONE_NUMBER not set. SMS sending may fail.');
@@ -94,7 +97,7 @@ export class TelnyxSMSService {
             // Create campaign record
             let campaignId: string | null = null;
             if (message.campaignName) {
-                const { data: campaign, error } = await supabase
+                const { data: campaign, error } = await this.supabase.client
                     .from('telnyx_sms_campaigns')
                     .insert({
                         name: message.campaignName,
@@ -128,7 +131,7 @@ export class TelnyxSMSService {
 
                     // Update campaign ID in database
                     if (campaignId) {
-                        await supabase
+                        await this.supabase.client
                             .from('telnyx_sms')
                             .update({ campaign_id: campaignId })
                             .eq('message_id', result.message_id);
@@ -153,7 +156,7 @@ export class TelnyxSMSService {
 
             // Update campaign status
             if (campaignId) {
-                await supabase
+                await this.supabase.client
                     .from('telnyx_sms_campaigns')
                     .update({
                         sent_count: sentCount,
@@ -209,7 +212,7 @@ export class TelnyxSMSService {
                 updateData.error_message = payload.errors?.[0]?.detail || 'Unknown error';
             }
 
-            await supabase
+            await this.supabase.client
                 .from('telnyx_sms')
                 .update(updateData)
                 .eq('message_id', messageId);
@@ -225,7 +228,7 @@ export class TelnyxSMSService {
      */
     private async storeSMS(data: any): Promise<void> {
         try {
-            const { error } = await supabase
+            const { error } = await this.supabase.client
                 .from('telnyx_sms')
                 .insert({
                     message_id: data.message_id,
@@ -250,7 +253,7 @@ export class TelnyxSMSService {
      */
     async listSMS(limit: number = 50, offset: number = 0): Promise<any> {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase.client
                 .from('telnyx_sms')
                 .select('*')
                 .order('created_at', { ascending: false })
@@ -270,17 +273,17 @@ export class TelnyxSMSService {
      */
     async getAnalytics(): Promise<any> {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await this.supabase.client
                 .from('telnyx_sms')
                 .select('status, cost, created_at');
 
             if (error) throw error;
 
             const total = data.length;
-            const sent = data.filter(s => s.status === 'sent' || s.status === 'delivered').length;
-            const delivered = data.filter(s => s.status === 'delivered').length;
-            const failed = data.filter(s => s.status === 'failed').length;
-            const totalCost = data.reduce((sum, s) => sum + (s.cost || 0), 0);
+            const sent = data.filter((s: any) => s.status === 'sent' || s.status === 'delivered').length;
+            const delivered = data.filter((s: any) => s.status === 'delivered').length;
+            const failed = data.filter((s: any) => s.status === 'failed').length;
+            const totalCost = data.reduce((sum: number, s: any) => sum + (s.cost || 0), 0);
 
             return {
                 total_sms: total,
